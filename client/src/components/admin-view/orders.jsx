@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { Button } from "../ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { Button } from "../ui/button.jsx";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card.jsx";
 import { Dialog } from "../ui/dialog";
 import {
   Table,
@@ -59,8 +59,8 @@ function AdminOrdersView() {
           <TableBody>
             {orderList && orderList.length > 0
               ? orderList.map((orderItem) => (
-                  <TableRow>
-                    <TableCell>{orderItem?._id}</TableCell>
+                  <TableRow key={orderItem?._id}>
+                    <TableCell  >{orderItem?._id}</TableCell>
                     <TableCell>{orderItem?.orderDate.split("T")[0]}</TableCell>
                     <TableCell>
                       <Badge

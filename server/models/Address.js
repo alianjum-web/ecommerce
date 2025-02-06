@@ -1,15 +1,34 @@
-const mongoose = require("mongoose");
+import mongoose, { Schema } from "mongoose";
+import User from "./User.js";
 
-const AddressSchema = new mongoose.Schema(
+const AddressSchema = new Schema(
   {
-    userId: String,
-    address: String,
-    city: String,
-    pincode: String,
-    phone: String,
-    notes: String,
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    address: {
+      type: String,
+      required: true,
+    },
+    city: {
+      type: String,
+      required: true,
+    },
+    pincode: {
+      type: String,
+      required: true,
+    },
+    phone: {
+      type: String,
+      required: true,
+    },
+    notes: {
+      type: String,
+    },
   },
   { timestamps: true }
 );
 
-module.exports = mongoose.model("Address", AddressSchema);
+export const Address = mongoose.model("Address", AddressSchema);
