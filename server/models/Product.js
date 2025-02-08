@@ -1,12 +1,9 @@
-import mongoose, { Schema } from 'mongoose';
-
+import mongoose, { Schema } from "mongoose";
 
 const ProductSchema = new Schema(
   {
-    image: {
-      type: String,
-      required: true, // ✅ Ensure every product has an image
-    },
+    imageUrl: { type: String, required: true }, // Cloudinary image URL
+    imagePublicId: { type: String, required: true }, // Cloudinary public ID
     title: {
       type: String,
       required: true,
@@ -40,7 +37,7 @@ const ProductSchema = new Schema(
           return !value || value < this.price;
         },
         message: "Sale price must be less than the original price.",
-      }
+      },
     },
     totalStock: {
       type: Number,
@@ -56,5 +53,5 @@ const ProductSchema = new Schema(
   },
   { timestamps: true }
 );
- 
-export const Product= mongoose.model("Product", ProductSchema);
+
+export const Product = mongoose.model("Product", ProductSchema);
