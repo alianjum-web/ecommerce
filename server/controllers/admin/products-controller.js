@@ -1,6 +1,5 @@
-const { imageUploadUtil } = require("../../helpers/cloudinary");
-const Product = require("../../models/Product");
-
+import { imageUploadUtil } from '../../helpers/cloudinary';
+import Product from '../../models/Product';
 const handleImageUpload = async (req, res) => {
   try {
     const b64 = Buffer.from(req.file.buffer).toString("base64");
@@ -154,7 +153,7 @@ const deleteProduct = async (req, res) => {
   }
 };
 
-module.exports = {
+export {
   handleImageUpload,
   addProduct,
   fetchAllProducts,
