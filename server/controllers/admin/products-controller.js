@@ -99,19 +99,29 @@ const addProduct = async (req, res) => {
 
 const fetchAllProducts = async (req, res) => {
   try {
-    const listOfProducts = await Product.find({});
+    const listOfAllPriducts = await Product.find({});
+
+    if (!listOfAllPriducts) {
+      logger.warn("No product found");
+      return res.status(404).json({
+        success: false,
+        message: "Unable to find any product",
+      })
+    }
+
     res.status(200).json({
       success: true,
-      data: listOfProducts,
-    });
-  } catch (e) {
-    console.log(e);
+      message: listOfAllPriducts,
+    })
+  } catch (error) {
+    logger.error("Erros occured while fetchinthe products", error);
     res.status(500).json({
       success: false,
-      message: "Error occured",
-    });
+      message: "Error occured while fetching products",
+    })
   }
-};
+}
+ 
 
 //edit a product
 const editProduct = async (req, res) => {
