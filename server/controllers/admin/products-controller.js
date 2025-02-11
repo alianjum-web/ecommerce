@@ -1,17 +1,38 @@
-import { imageUploadUtil } from '../../helpers/cloudinary';
-import Product from '../../models/Product';
+import { imageUploadUtil } from "../../helpers/cloudinary";
+import Product from "../../models/Product";
+import { validateFile } from "../../utils/fileValidation"; // Utility for file validation
+import logger from "../../utils/logger";
+
 const handleImageUpload = async (req, res) => {
   try {
+    //check file exists
+    if (!req.file) {
+      logger.warn("file does not exists");
+      return res.status(400).json({
+        success: false,
+        message: "No file uploaded",
+      });
+    }
+
+    //Validate file type and size
+    const validationError = validateFile(req.file);  // validateFile if return null means falsy.
+    if (validationError) {
+      return res.status(400).json({
+        success: false,
+        message: validationError,
+      });
+    }
+
     const b64 = Buffer.from(req.file.buffer).toString("base64");
-    const url = "data:" + req.file.mimetype + ";base64," + b64;
+    const url = `data:${req.file.minetype};base64,${b64}`;
     const result = await imageUploadUtil(url);
 
-    res.json({
+    res.status(200).json({
       success: true,
       result,
     });
   } catch (error) {
-    console.log(error);
+    logger.error("Error uploading image.", error);
     res.json({
       success: false,
       message: "Error occured",

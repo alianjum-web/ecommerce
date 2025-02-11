@@ -2,7 +2,7 @@ import multer from "multer";
 import sharp from "sharp";
 import cloudinary from "cloudinary";
 import multer from 'multer';
-import logger from "./logger";
+import logger from "../utils/logger";
 
 // Configure Cloudinary for image hosting
 cloudinary.v2.config({
@@ -31,47 +31,50 @@ const upload = multer({
   @param {Buffer} fileBuffer - The image file as a Buffer.
   @returns {Promise<{ url: string, publicId: string }>} - The Cloudinary URL and public ID of the uploaded image.
   @throws {Error} - If the upload fails.
- 
-*/
-
-
+ */
 async function imageUploadUtil(fileBuffer) {
-  if (!fileBuffer || !Buffer.isBuffer(fileBuffer)) { //filrBuffer is an instanc of buffer classs in node.Buffer:used to handle binary data(image).
-    throw new Error("Invalid file buffer")
+  // Validate input
+  if (!fileBuffer || !Buffer.isBuffer(fileBuffer)) {
+    throw new Error('Invalid file buffer: The provided file is not a valid image.');
   }
 
   try {
     // Resize and convert image using sharp
     const optimizedImageBuffer = await sharp(fileBuffer)
-      .resize(800, 800, { fit: "inside", withoutEnlargement: true })  // Resize without enlarging
-      .toFormat("webp", { quality: 80 })  // Convert to WEBP with 80% quality
+      .resize(800, 800, { fit: 'inside', withoutEnlargement: true }) // Resize without enlarging
+      .toFormat('webp', { quality: 80 }) // Convert to WEBP with 80% quality
       .toBuffer();
-  
+
     // Upload optimized image to Cloudinary
     return new Promise((resolve, reject) => {
       const uploadStream = cloudinary.v2.uploader.upload_stream(
-        { resource_type: "image", folder: "ecommerce-products" },
-      (error, result) => {
-        if (error) {
-          logger.error("Cloudinary upload error", error);
-          reject(new Error("Cloudinary failed to upload image to cloudinary."));
-        } else {
-          logger.info("Image uploaded successfully:", result.public_id);
-          resolve({
-            url: result.secure_url,
-            publicId: result.public_id  // Store this in database
-          })
+        {
+          resource_type: 'image',
+          folder: 'ecommerce-products', // Organize images in a folder
+        },
+        (error, result) => {
+          if (error) {
+            logger.error('Cloudinary upload error:', error);
+            reject(new Error('Failed to upload image to Cloudinary. Please try again.'));
+          } else {
+            logger.info('Image uploaded successfully:', result.public_id);
+            resolve({
+              url: result.secure_url,
+              publicId: result.public_id, // Store this in the database
+            });
+          }
         }
-      })
-  
-      uploadStream.end(optimizedImageBuffer); // Send the image to Cloudinary
-  
-    })
+      );
+
+      // Send the optimized image to Cloudinary
+      uploadStream.end(optimizedImageBuffer);
+    });
   } catch (error) {
-    logger.error("Image optimized error:", error);
-    throw new Error("Failed to optimize image.");
+    logger.error('Image optimization error:', error);
+    throw new Error('Failed to optimize image. Please ensure the file is a valid image.');
   }
 }
+
 /*
 * Deletes an image from Cloudinary using its public ID.
 * @param {string} publicId - The public ID of the image to delete.
