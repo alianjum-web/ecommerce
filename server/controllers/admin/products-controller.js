@@ -1,9 +1,10 @@
-import { imageUploadUtil } from "../../helpers/cloudinary";
+import { imageUploadUtil, deleteImageFromCloudinary } from "../../helpers/cloudinary";
 import Product from "../../models/Product";
 import { validateFile } from "../../utils/fileValidation"; // Utility for file validation
 import { validationResult } from "express-validator";
 import logger from "../../utils/logger";
 import { editProduct } from "../../../client/src/store/admin/products-slice/index";
+import { logoutUser } from '../../../client/src/store/auth-slice/index';
 
 const handleImageUpload = async (req, res) => {
   try {
@@ -45,17 +46,6 @@ const handleImageUpload = async (req, res) => {
 //add a new product
 const addProduct = async (req, res) => {
   try {
-    //check validation errors
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      logger.warn("Validation errors:", errors.array());
-      return res.status(400).json({
-        success: false,
-        message: "Validation errors",
-        errors: errors.array(),
-      });
-    }
-
     const {
       image,
       title,
@@ -67,6 +57,14 @@ const addProduct = async (req, res) => {
       totalStock,
       averageReview,
     } = req.body;
+
+
+    if (!title || !category || !price || !brand || !totalStock) {
+      return res.status(400).json({
+        success: false,
+        message: 'Title, category, and price are required fields.',
+      });
+    }
 
     const newlyCreatedProduct = new Product({
       image,
@@ -124,7 +122,6 @@ const fetchAllProducts = async (req, res) => {
 };
 
 //edit a product
-
 const editProduct = async (req, res) => {
   try {
     const { id } = req.params;
@@ -175,26 +172,46 @@ const editProduct = async (req, res) => {
 const deleteProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    const product = await Product.findByIdAndDelete(id);
-
-    if (!product)
-      return res.status(404).json({
+    if (!id) {
+      logger.warn("id is required");
+      return res.status(400).json({
         success: false,
-        message: "Product not found",
-      });
+        message: "Image is required",
+      })
+    }
 
+    const product = await Product.findById(id);
+
+    if (!product) {
+      logger.warn("No product found");
+      return res.status(403).json({
+        success: false,
+        message: "Product not foundin db",
+      })
+    }
+
+    // delete image from cloudinary
+    if (product.imagePublicId) {
+      await deleteImageFromCloudinary(product.imagePublicId);
+      logger.info(`image deleted from cloudinary with publicId:${imagePublicId} successfully`)
+    }
+    // Delete product from db
+    await Product.findByIdAndDelete(id);
+
+    //send return response
+    logger.info(`Image deleted successfully: ${id}`)
     res.status(200).json({
       success: true,
-      message: "Product delete successfully",
-    });
-  } catch (e) {
-    console.log(e);
+      message: "Product deleted successfully"
+    })
+  } catch (error) {
+    logger.error('Error encountered while deleting image');
     res.status(500).json({
       success: false,
-      message: "Error occured",
-    });
+      message: "Error encountered while deleting image",
+    })
   }
-};
+}
 
 export {
   handleImageUpload,
