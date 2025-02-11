@@ -19,7 +19,7 @@ const ProductSchema = new Schema(
       required: true, // ✅ Products should have a category
       trim: true,
     },
-    brand: {
+    brand: { 
       type: String,
       required: true, // ✅ Specify the brand (especially in marketplaces)
       trim: true,

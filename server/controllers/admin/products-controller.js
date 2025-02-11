@@ -1,6 +1,7 @@
 import { imageUploadUtil } from "../../helpers/cloudinary";
 import Product from "../../models/Product";
 import { validateFile } from "../../utils/fileValidation"; // Utility for file validation
+import { validationResult } from "express-validator";
 import logger from "../../utils/logger";
 
 const handleImageUpload = async (req, res) => {
@@ -15,7 +16,7 @@ const handleImageUpload = async (req, res) => {
     }
 
     //Validate file type and size
-    const validationError = validateFile(req.file);  // validateFile if return null means falsy.
+    const validationError = validateFile(req.file); // validateFile if return null means falsy.
     if (validationError) {
       return res.status(400).json({
         success: false,
@@ -43,6 +44,17 @@ const handleImageUpload = async (req, res) => {
 //add a new product
 const addProduct = async (req, res) => {
   try {
+    //check validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      logger.warn("Validation errors:", errors.array());
+      return res.status(400).json({
+        success: false,
+        message: "Validation errors",
+        errors: errors.array(),
+      });
+    }
+
     const {
       image,
       title,
@@ -54,8 +66,6 @@ const addProduct = async (req, res) => {
       totalStock,
       averageReview,
     } = req.body;
-
-    console.log(averageReview, "averageReview");
 
     const newlyCreatedProduct = new Product({
       image,
@@ -70,15 +80,17 @@ const addProduct = async (req, res) => {
     });
 
     await newlyCreatedProduct.save();
+    logger.info(`Product created successfully: ${newlyCreatedProduct._id}`);
+
     res.status(201).json({
       success: true,
       data: newlyCreatedProduct,
     });
   } catch (e) {
-    console.log(e);
+    logger.error("Error adding product:", e);
     res.status(500).json({
       success: false,
-      message: "Error occured",
+      message: "Internal server error",
     });
   }
 };
