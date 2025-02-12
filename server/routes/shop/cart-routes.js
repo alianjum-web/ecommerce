@@ -1,11 +1,11 @@
-const express = require("express");
+import express from 'express';
 
-const {
+import {
   addToCart,
   fetchCartItems,
   deleteCartItem,
   updateCartItemQty,
-} = require("../../controllers/shop/cart-controller");
+} from "../../controllers/shop/cart-controller";
 
 const router = express.Router();
 
@@ -14,4 +14,4 @@ router.get("/get/:userId", fetchCartItems);
 router.put("/update-cart", updateCartItemQty);
 router.delete("/:userId/:productId", deleteCartItem);
 
-module.exports = router;
+export default router;

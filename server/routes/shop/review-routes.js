@@ -1,13 +1,13 @@
-const express = require("express");
+import express from 'express';
 
-const {
+import {
   addProductReview,
   getProductReviews,
-} = require("../../controllers/shop/product-review-controller");
+} from "../../controllers/shop/product-review-controller";
 
 const router = express.Router();
 
 router.post("/add", addProductReview);
 router.get("/:productId", getProductReviews);
 
-module.exports = router;
+export default router;

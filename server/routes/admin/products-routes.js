@@ -1,14 +1,14 @@
 import express from 'express';
 
-const {
+import {
   handleImageUpload,
   addProduct,
   editProduct,
   fetchAllProducts,
   deleteProduct,
-} = require("../../controllers/admin/products-controller");
+} from "../../controllers/admin/products-controller";
 
-const { upload } = require("../../helpers/cloudinary");
+import { upload } from "../../helpers/cloudinary";
 
 const router = express.Router();
 
@@ -18,4 +18,4 @@ router.put("/edit/:id", editProduct);
 router.delete("/delete/:id", deleteProduct);
 router.get("/get", fetchAllProducts);
 
-module.exports = router;
+export default router;

@@ -1,6 +1,6 @@
-const Order = require("../../models/Order");
-const Product = require("../../models/Product");
-const ProductReview = require("../../models/Review");
+import Order from"../../models/Order";
+import Product  from"../../models/Product";
+import ProductReview from"../../models/Review";
 
 const addProductReview = async (req, res) => {
   try {
@@ -81,4 +81,4 @@ const getProductReviews = async (req, res) => {
   }
 };
 
-module.exports = { addProductReview, getProductReviews };
+export { addProductReview, getProductReviews };

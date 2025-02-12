@@ -1,5 +1,9 @@
-const Cart = require("../../models/Cart");
-const Product = require("../../models/Product");
+import Cart from "../../models/Cart";
+import Product from "../../models/Product";
+import { fetchCartItems } from "@/store/shop/cart-slice";
+import logger from "../../utils/logger";
+import mongoose, { mongo } from "mongoose";
+import { useRef } from "react";
 
 const addToCart = async (req, res) => {
   try {
@@ -55,43 +59,64 @@ const fetchCartItems = async (req, res) => {
   try {
     const { userId } = req.params;
 
-    if (!userId) {
+    // Validate userId
+    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+      logger.error("Invalid user ID provided!");
       return res.status(400).json({
         success: false,
-        message: "User id is manadatory!",
+        message: "Invalid user ID provided!",
       });
     }
 
-    const cart = await Cart.findOne({ userId }).populate({
-      path: "items.productId",
-      select: "image title price salePrice",
-    });
+    const cartData = await Cart.aggregate([
+      // Match teh cart of given userId
+      { $match: { userId: mongoose.Types.ObjectId(userId) } },
+      // Unwind the items array to deal with each items separately
+      { $unwind: "$items" },
+      // Look up to fetch the product details for each item in the cart
+      {
+        $lookup: {
+          from: "products",
+          localField: "items.productId",
+          foreignField: "_id",
+          as: "productDetails",
+        },
+      },
 
-    if (!cart) {
+      // Unwind the productDetails array to deal with each product separately
+      { $unwind: "$productDetails" },
+      // Project (select) only required fields
+      {
+        $project: {
+          _id: 1,
+          userId: 1,
+          "items.productId": "$productDetails._id",
+          "items.image": "$productDetails.image",
+          "items.title": "$productDetails.title",
+          "items.price": "$productDetails.price",
+          "items.salePrice": "$productDetails.salePrice",
+          "items.quantity": "$productDetails.quantity",
+        },
+      },
+      // Group back to reconstruct the cart with filtered items
+      {
+        $grpup: {
+          _id: "$_id",
+          userId: { $first: "$userId" },
+          items: { $push: "$items" }, // Reconstruct the items array
+        },
+      },
+    ]);
+    //If cart not found
+    if (!cartData.length) {
+      logger.error("Cart not found!");
       return res.status(404).json({
         success: false,
         message: "Cart not found!",
       });
     }
-
-    const validItems = cart.items.filter(
-      (productItem) => productItem.productId
-    );
-
-    if (validItems.length < cart.items.length) {
-      cart.items = validItems;
-      await cart.save();
-    }
-
-    const populateCartItems = validItems.map((item) => ({
-      productId: item.productId._id,
-      image: item.productId.image,
-      title: item.productId.title,
-      price: item.productId.price,
-      salePrice: item.productId.salePrice,
-      quantity: item.quantity,
-    }));
-
+    // Return the cart with populte items
+    logger.info(`Fetched cart items successfully for user: ${userId}`);
     res.status(200).json({
       success: true,
       data: {
@@ -100,10 +125,10 @@ const fetchCartItems = async (req, res) => {
       },
     });
   } catch (error) {
-    console.log(error);
+    logger.error("Error fetching cart items:", error);
     res.status(500).json({
       success: false,
-      message: "Error",
+      message: "Internal server error",
     });
   }
 };
@@ -229,9 +254,73 @@ const deleteCartItem = async (req, res) => {
   }
 };
 
-module.exports = {
-  addToCart,
-  updateCartItemQty,
-  deleteCartItem,
-  fetchCartItems,
+export { addToCart, updateCartItemQty, deleteCartItem, fetchCartItems };
+
+/*  Not more effeicient with populate method
+
+
+const fetchCartItems = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    // Validate userId
+    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+      logger.error("Invalid user ID provided!");
+      return res.status(400).json({
+        success: false,
+        message: "Invalid user ID provided!",
+      });
+    }
+    // Find the cart and populate product details
+    const cart = await Cart.findOne({ userId }).populate({
+      path: "items.productId",
+      select: "imageUrl title price salePrice", // Select only required fields
+    });
+
+    if (!cart) {
+      logger.error("Cart not found!");
+      return res.status(404).json({
+        success: false,
+        message: "Cart not found!",
+      });
+    }
+
+    // Filter out invalid items that no longer exists
+    const validItems = cart.items.filter((item) => item.productId);
+
+    //Update cart if invalid items are found
+    if (validItems.length !== cart.items.length) {
+      cart.items = validItems;
+      await cart.save();
+      logger.info("Cart updated successfully!");
+    }
+
+    // Map items to include onky necessary fields
+    const populateCartItems = validItems.map((item) => ({
+      productId: item.productId._id,
+      image: item.productId.imageUrl, //Use image from ProductSchema
+      title: item.productId.title,
+      price: item.productId.price,
+      salePrice: item.productId.salePrice,
+      quantity: item.quantity,
+    }));
+
+     // Return the cart with populte items
+    logger.info(`Fetched cart items successfully for user: ${userId}`);
+    res.status(200).json({
+      success: true,
+      data: {
+        ...cart._doc,
+        items: populateCartItems,
+      },
+    });
+  } catch (error) {
+    logger.error("Error fetching cart items:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
 };
+
+*/
