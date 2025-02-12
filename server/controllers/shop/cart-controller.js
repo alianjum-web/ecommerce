@@ -3,54 +3,119 @@ import Product from "../../models/Product";
 import { fetchCartItems } from "@/store/shop/cart-slice";
 import logger from "../../utils/logger";
 import mongoose, { mongo } from "mongoose";
-import { useRef } from "react";
+import { LogOut } from "lucide-react";
 
+// const addToCart = async (req, res) => {
+//   try {
+//     const { userId, productId, quantity } = req.body;
+
+//     if (!userId || !productId || quantity <= 0) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Invalid data provided!",
+//       });
+//     }
+
+//     const product = await Product.findById(productId);
+
+//     if (!product) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "Product not found",
+//       });
+//     }
+
+//     let cart = await Cart.findOne({ userId });
+
+//     if (!cart) {
+//       cart = new Cart({ userId, items: [] });
+//     }
+
+//     const findCurrentProductIndex = cart.items.findIndex(
+//       (item) => item.productId.toString() === productId
+//     );
+
+//     if (findCurrentProductIndex === -1) {
+//       cart.items.push({ productId, quantity });
+//     } else {
+//       cart.items[findCurrentProductIndex].quantity += quantity;
+//     }
+
+//     await cart.save();
+//     res.status(200).json({
+//       success: true,
+//       data: cart,
+//     });
+//   } catch (error) {
+//     console.log(error);
+//     res.status(500).json({
+//       success: false,
+//       message: "Error",
+//     });
+//   }
+// };
 const addToCart = async (req, res) => {
   try {
     const { userId, productId, quantity } = req.body;
+    // validate input
 
-    if (!userId || !productId || quantity <= 0) {
+    if (
+      !userId ||
+      !productId ||
+      !mongoose.Types.ObjectId.isValid(userId) ||
+      !mongoose.Types.ObjectId.isValid(productId) ||
+      quantity <= 0
+    ) {
+      logger.warn("invalid input data provided");
       return res.status(400).json({
         success: false,
-        message: "Invalid data provided!",
+        message:
+          "Invalid input data. Please provide valid userId, productId, and quantity.",
       });
     }
-
+    // Check if the product exist
     const product = await Product.findById(productId);
-
     if (!product) {
+      logger.warn(`Product not found: ${productId}`);
       return res.status(404).json({
         success: false,
         message: "Product not found",
       });
     }
-
-    let cart = await Cart.findOne({ userId });
+    let cart = await Cart.findById({ userId });
 
     if (!cart) {
       cart = new Cart({ userId, items: [] });
+      logger.info(`New cart created for user: ${userId}`);
     }
 
-    const findCurrentProductIndex = cart.items.findIndex(
-      (item) => item.productId.toString() === productId
+    // Check if the product already exist in the cart
+    const productInCartExists = cart.items.findIndex(
+      (item) => item.productId.toString() === productId // Converts item.productId (which is usually an ObjectId) to a string.
     );
-
-    if (findCurrentProductIndex === -1) {
+    // findIndex:moves through items array: return 1 if found otherwise -1
+    if (productInCartExists === -1) {
+      // Add new product to cart
       cart.items.push({ productId, quantity });
+      logger.info(`Product added to cart: ${productId}`);
     } else {
+      // Update quantity of existing product
       cart.items[findCurrentProductIndex].quantity += quantity;
+      logger.info(`Product quantity updated in cart : ${productId}`);
     }
-
     await cart.save();
+
+    // Return success responses
+    logger.info(`Cart updated successfully for user: ${userId}`);
     res.status(200).json({
       success: true,
       data: cart,
     });
   } catch (error) {
-    console.log(error);
+    logger.error("Error while adding produt to cart", error);
     res.status(500).json({
       success: false,
-      message: "Error",
+      message: "Error while adding product to cart",
     });
   }
 };
