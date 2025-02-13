@@ -264,57 +264,98 @@ const updateCartItemQty = async (req, res) => {
 const deleteCartItem = async (req, res) => {
   try {
     const { userId, productId } = req.params;
-    if (!userId || !productId) {
+
+    //Validate input
+    if (
+      !userId ||
+      !productId ||
+      !mongoose.Types.ObjectId.isValid(userId) ||
+      !mongoose.Types.ObjectId.isValid(productId)
+    ) {
+      logger.warn("Invalid input");
       return res.status(400).json({
         success: false,
-        message: "Invalid data provided!",
+        message:
+          "Invalid input data. Please provide valid userId and productId.",
       });
     }
 
-    const cart = await Cart.findOne({ userId }).populate({
-      path: "items.productId",
-      select: "image title price salePrice",
-    });
-
-    if (!cart) {
-      return res.status(404).json({
-        success: false,
-        message: "Cart not found!",
-      });
-    }
-
-    cart.items = cart.items.filter(
-      (item) => item.productId._id.toString() !== productId
+    // Remove product from cart
+    const updatedCart = await Cart.findOneAndUpdate(
+      { userId },
+      { $pull: { items: { productId } } }, // remove the product with productId
+      { new: true } // return modified document
     );
 
-    await cart.save();
+    // If cart not found
+    if (!updatedCart) {
+      logger.warn("Cart not found");
+      return res.status(404).json({
+        success: false,
+        message: "Cart not found",
+      });
+    }
 
-    await cart.populate({
-      path: "items.productId",
-      select: "image title price salePrice",
-    });
+    // Use aggregation to fetch cart with product details
+    const cartWithDetails = await Cart.aggregate([
+      { $match: { _id: updatedCart._id } },
+      {
+        $lookup: {
+          from: "products", // Collection name for product model:mongoDb turn the collection to lowercase plular(eg.products)
+          localField: "items.productId",
+          foreignField: "_id",
+          as: "productDetails",
+        },
+      },
+      { $unwind: "$productDetils" },
+      {
+        $project: {
+          _id: 1,
+          userId: 1,
+          "items.productId": 1,
+          "items.quantity": 1,
+          "items.productDetails": {
+            imageUrl: "$productDetails.imageUrl",
+            title: "productDetails.title",
+            price: "$productDetails.price",
+            salePrice: "$productDetails.salePrice",
+          },
+        },
+      },
+      {
+        $grpup: {
+          _id: "$id",
+          userId: { $first: "$userId" }, // first ensures only one userId is taken per cart (since it's the same for all items).
+          //  push collects all items of the cart into an array so that each cart has its products grouped together.
+          items: {
+            $push: {
+              productId: "$items.productId",
+              quantity: "$items.quantity",
+              productDetails: "$items.productDetails",
+            },
+          },
+        },
+      },
+    ]);
 
-    const populateCartItems = cart.items.map((item) => ({
-      productId: item.productId ? item.productId._id : null,
-      image: item.productId ? item.productId.image : null,
-      title: item.productId ? item.productId.title : "Product not found",
-      price: item.productId ? item.productId.price : null,
-      salePrice: item.productId ? item.productId.salePrice : null,
-      quantity: item.quantity,
-    }));
+    if (!cartWithDetails || cartWithDetails.length === 0) {
+      logger.warn("cart not found");
+      return res.status(404).json({
+        success: false,
+        message: "Cart not found",
+      });
+    }
 
+    // Return teh updated cart
     res.status(200).json({
       success: true,
-      data: {
-        ...cart._doc,
-        items: populateCartItems,
-      },
+      data: cartWithDetails[0],
     });
   } catch (error) {
-    console.log(error);
+    logger.error("Error deleting cart item:", error);
     res.status(500).json({
       success: false,
-      message: "Error",
+      message: "Internal server error",
     });
   }
 };
@@ -375,7 +416,7 @@ const fetchCartItems = async (req, res) => {
     res.status(200).json({
       success: true,
       data: {
-        ...cart._doc,
+        ...cart._doc,  // Spreads the original cart document's fields (_id, userId, createdAt, etc.).Mongoose stores actual document data inside cart._doc
         items: populateCartItems,
       },
     });
