@@ -1,4 +1,4 @@
-import paypal from "../../helpers/paypal";
+import { createPayPalPayment, getPayPalApprovalURL } from "../../helpers/paypal";
 import Order from "../../models/Order";
 import Cart from "../../models/Cart";
 import Product from "../../models/Product";

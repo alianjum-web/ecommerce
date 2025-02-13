@@ -1,4 +1,4 @@
-import paypal from 'paypal-rest-sdk';
+import paypal, { payment } from 'paypal-rest-sdk';
 import logger from './logger';
 
 
@@ -24,4 +24,25 @@ try {
   throw new Error("Failed to configure PayPal SDK"); 
 }
 
-export default paypal;
+export const createPayPalPayment = async (paymentData) => {
+  return new Promise((resolve, reject) => {
+    paypal.payment.create(paymentData, (error, payment) => {
+      if (error) {
+        logger.error('PayPal payment creation failed:', error);
+        reject(new Error('Failed to create paypal payment'));
+      } else {
+        logger.info("Paypal payment created successfully:", payment.id);
+        resolve(payment);
+      }
+    })
+  });
+}
+
+export const getPayPalApprovalURL = (payment) => {
+  const approvalURL = payment.links.find((link) => link.rel === 'approval_url')?.href;
+  if (!approvalURL) {
+    throw new Error('Approval URL not found in paypal payment response');
+  }
+  return approvalURL;
+}
+
