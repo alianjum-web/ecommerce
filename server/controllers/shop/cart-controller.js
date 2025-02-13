@@ -4,6 +4,7 @@ import { fetchCartItems } from "@/store/shop/cart-slice";
 import logger from "../../utils/logger";
 import mongoose, { mongo } from "mongoose";
 import { LogOut } from "lucide-react";
+import { logoutUser } from "@/store/auth-slice";
 
 // const addToCart = async (req, res) => {
 //   try {
@@ -197,66 +198,116 @@ const fetchCartItems = async (req, res) => {
     });
   }
 };
-
+// updates the quantity of a product in a user's cart.
 const updateCartItemQty = async (req, res) => {
   try {
     const { userId, productId, quantity } = req.body;
 
-    if (!userId || !productId || quantity <= 0) {
+    // Validate input
+    if (
+      !userId ||
+      !productId ||
+      !mongoose.Types.ObjectId.isValid(userId) ||
+      !mongoose.Types.ObjectId.isValid(productId) ||
+      quantity <= 0
+    ) {
       return res.status(400).json({
         success: false,
-        message: "Invalid data provided!",
+        message:
+          "Invalid input data. Please provide valid userId, productId, and quantity.",
       });
     }
 
     const cart = await Cart.findOne({ userId });
     if (!cart) {
+      logger.warn("cart not found");
       return res.status(404).json({
         success: false,
-        message: "Cart not found!",
+        message: "Cart not found",
       });
     }
 
-    const findCurrentProductIndex = cart.items.findIndex(
+    // Find the index of the product in the cart
+    const productIndex = cart.items.findIndex(
+      // contain index if found otherwiae -1
       (item) => item.productId.toString() === productId
     );
-
-    if (findCurrentProductIndex === -1) {
+    if (productIndex === -1) {
+      logger.error("Product not found in the cart");
       return res.status(404).json({
         success: false,
-        message: "Cart item not present !",
+        message: "Product not found in the cart",
       });
     }
 
-    cart.items[findCurrentProductIndex].quantity = quantity;
+    // Update the quantity of the product
+    cart.items[productIndex].quantity = quantity;
+
+    // saved the updated cart
     await cart.save();
 
-    await cart.populate({
-      path: "items.productId",
-      select: "image title price salePrice",
-    });
+    // Use aggregation to fetch cart with product details
+    const updatedCart = await Cart.aggregate([
+      // String received from request,so convert userId to ObjectId for match
+      { $match: { userId: mongoose.Types.ObjectId(userId) } },
+      { $unwind: "$items" },
+      {
+        $lookup: {
+          from: "products",
+          localField: "items.productId",
+          foreignField: "_id",
+          as: "productDetails",
+        },
+      },
+      { $unwind: "$productDetails" },
+      {
+        $project: {
+          _id: 1,
+          userId: 1,
+          "items.productId": 1,
+          "items.quantity": 1,
+          "items.productDetails": {
+            imageUrl: "$productDetails.imageUrl",
+            title: "$productDetails.title",
+            price: "$productDetails.price",
+            salePrice: "$productDetails.salePrice",
+          },
+        },
+      },
+      {
+        $group: {
+          _id: "$_id",
+          userId: { $first: "$userId" },
+          items: {
+            $push: {
+              productId: "$items.productId",
+              quantity: "$items.quantity",
+              productDetails: "$items.productDetails",
+            },
+          },
+        },
+      },
+    ]);
+    // If cart not found after aggregation
+    if (!updatedCart || updatedCart.length === 0) {
+      logger.error("Cart not found");
+      return res.status(404).json({
+        success: false,
+        message: "Cart not found",
+      });
+    }
 
-    const populateCartItems = cart.items.map((item) => ({
-      productId: item.productId ? item.productId._id : null,
-      image: item.productId ? item.productId.image : null,
-      title: item.productId ? item.productId.title : "Product not found",
-      price: item.productId ? item.productId.price : null,
-      salePrice: item.productId ? item.productId.salePrice : null,
-      quantity: item.quantity,
-    }));
-
+    // Return the updated cart
+    logger.info("cart updated succesfully ");
     res.status(200).json({
       success: true,
-      data: {
-        ...cart._doc,
-        items: populateCartItems,
-      },
+      data: updatedCart[0],
     });
   } catch (error) {
-    console.log(error);
+    logger.error("Error updating cart item quantity:", error);
     res.status(500).json({
       success: false,
-      message: "Error",
+      message: "Internal server error",
     });
   }
 };
