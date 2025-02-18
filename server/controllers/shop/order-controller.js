@@ -1,26 +1,41 @@
-import { createPayPalPayment, getPayPalApprovalURL } from "../../helpers/paypal";
+import {
+  createPayPalPayment,
+  getPayPalApprovalURL,
+} from "../../helpers/paypal";
 import Order from "../../models/Order";
 import Cart from "../../models/Cart";
 import Product from "../../models/Product";
+import { validationResult } from "express-validator";
+import logger from "../../utils/logger";
 
 const createOrder = async (req, res) => {
   try {
+    //Validate request body
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      logger.warn("Validate errorrs:", errors.array());
+      return res.status(400).json({
+        success: false,
+        message: "Validation errors",
+        errors: errors.array(),
+      });
+    }
+    
     const {
       userId,
+      cartId,
       cartItems,
       addressInfo,
-      orderStatus,
       paymentMethod,
-      paymentStatus,
       totalAmount,
       orderDate,
       orderUpdateDate,
       paymentId,
       payerId,
-      cartId,
     } = req.body;
 
-    const create_payment_json = {
+    // Prepare Paypal payment data
+    const paymentData = {
       intent: "sale",
       payer: {
         payment_method: "paypal",
@@ -29,7 +44,7 @@ const createOrder = async (req, res) => {
         return_url: "http://localhost:5173/shop/paypal-return",
         cancel_url: "http://localhost:5173/shop/paypal-cancel",
       },
-      transactions: [
+      transaction: [
         {
           item_list: {
             items: cartItems.map((item) => ({
@@ -44,53 +59,50 @@ const createOrder = async (req, res) => {
             currency: "USD",
             total: totalAmount.toFixed(2),
           },
-          description: "description",
+          description: "Payment for order",
         },
       ],
     };
 
-    paypal.payment.create(create_payment_json, async (error, paymentInfo) => {
-      if (error) {
-        console.log(error);
+    // Create paypal payment using service
+    const paymentInfo = await createPayPalPayment(paymentData);
 
-        return res.status(500).json({
-          success: false,
-          message: "Error while creating paypal payment",
-        });
-      } else {
-        const newlyCreatedOrder = new Order({
-          userId,
-          cartId,
-          cartItems,
-          addressInfo,
-          orderStatus,
-          paymentMethod,
-          paymentStatus,
-          totalAmount,
-          orderDate,
-          orderUpdateDate,
-          paymentId,
-          payerId,
-        });
-
-        await newlyCreatedOrder.save();
-
-        const approvalURL = paymentInfo.links.find(
-          (link) => link.rel === "approval_url"
-        ).href;
-
-        res.status(201).json({
-          success: true,
-          approvalURL,
-          orderId: newlyCreatedOrder._id,
-        });
-      }
+    // Create order in database
+    const newlyCreatedOrder = new Order({
+      userId,
+      cartId,
+      cartItems,
+      addressInfo,
+      orderStatus: "pending",
+      paymentMethod,
+      paymentStatus: "pending",
+      totalAmount,
+      orderDate,
+      orderUpdateDate,
+      paymentId: paymentInfo.id,
+      payerId,
     });
-  } catch (e) {
-    console.log(e);
+
+    await newlyCreatedOrder.save();
+    // Get PayPal approval URL
+    const approvalURL = getPayPalApprovalURL(paymentInfo);
+    // Return success response
+    logger.info(`Order created successfully: ${newlyCreatedOrder._id}`);
+    res.status(201).json({
+      success: true,
+      approvalURL,
+      orderId: newlyCreatedOrder._id,
+    });
+
+    res.status(200).json({
+      success: true,
+      approvalURL,
+    });
+  } catch (error) {
+    logger.error("Error creating order:", error);
     res.status(500).json({
       success: false,
-      message: "Some error occured!",
+      message: "Internal Server Error",
     });
   }
 };
@@ -199,9 +211,4 @@ const getOrderDetails = async (req, res) => {
   }
 };
 
-export {
-  createOrder,
-  capturePayment,
-  getAllOrdersByUser,
-  getOrderDetails,
-};
+export { createOrder, capturePayment, getAllOrdersByUser, getOrderDetails };
