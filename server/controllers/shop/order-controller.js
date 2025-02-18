@@ -9,6 +9,9 @@ import { validationResult } from "express-validator";
 import logger from "../../utils/logger";
 import { capturePayment } from "@/store/shop/order-slice";
 import { UserCartItemsContent } from "@/components/shopping-view/cart-items-content";
+import { getAllOrdersByUserId } from '../../../client/src/store/shop/order-slice/index';
+import mongoose from "mongoose";
+import { Input } from '@/components/ui/input';
 
 const createOrder = async (req, res) => {
   try {
@@ -185,28 +188,85 @@ const capturePayment = async (req, res) => {
 const getAllOrdersByUser = async (req, res) => {
   try {
     const { userId } = req.params;
-
-    const orders = await Order.find({ userId });
+        // Validate input
+        if (!userId) {
+          return res.status(400).json({
+            success: false,
+            message: 'userId is required.',
+          });
+        }
+    
+    // Fetch orders using aggregation
+    const orders = await Order.aggregate([
+      { $match: { userId: mongoose.Types.ObjectId(userId) } },
+      {
+        $lookup: {
+          from: 'products',
+          localField: 'cartItems.productId',
+          foreignField: '_id',
+          as: 'productDetails',
+        }
+      },
+      {
+        $project: {
+          _id: 1,
+          userId: 1,
+          cartId: 1,
+          cartItems: {
+            $match: {
+              input: '$cartItems',
+              as: 'item',
+              in: {
+                productId: '$$item.productId',
+                quantity: '$$item.quantity',
+                productDetails: {
+                  $arrayElemAt: [
+                    {
+                      $filter: {
+                        input: '$productDetails',
+                        as: 'product',
+                        cond: { $eq: ['$$product._id', '$$item.productId',] }
+                      },
+                    },
+                    0,
+                  ],
+                },
+              },
+            },
+          },
+          addressInfo: 1,
+          orderStatus: 1,
+          paymentStatus: 1,
+          totalAmount: 1,
+          paymentId: 1,
+          payerId: 1,
+          createdAt: 1,
+          updatedAt: 1,
+        },
+      },
+    ]);    
 
     if (!orders.length) {
       return res.status(404).json({
         success: false,
-        message: "No orders found!",
+        message: 'No orders found for this user.',
       });
     }
+  // Return success response
+  logger.info('The orders are')
+  res.status(200).json({
+    success: true,
+    data: orders,
+  });
 
-    res.status(200).json({
-      success: true,
-      data: orders,
-    });
-  } catch (e) {
-    console.log(e);
-    res.status(500).json({
+  } catch (error) {
+    logger.error("error fetching orders", error);
+    return    res.status(500).json({
       success: false,
-      message: "Some error occured!",
+      message: 'An error occurred while capturing the payment.',
     });
   }
-};
+}
 
 const getOrderDetails = async (req, res) => {
   try {
