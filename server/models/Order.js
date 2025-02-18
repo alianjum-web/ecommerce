@@ -18,9 +18,9 @@ const OrderSchema = new Schema({
         ref: "Product",
         required: true,
       },
-      title: String,
-      image: String,
-      price: String,
+      title: { type: String, required: true },
+      image: { type: String, required: true },
+      price: { type: Number, required: true },      
       quantity: {
         type: Number,
         required: true,
@@ -62,7 +62,7 @@ const OrderSchema = new Schema({
   orderUpdateDate: Date,
   paymentId: {
     type: String,
-    required: function() {  //ensures that paymentId is only required when the payment has been successfully completed.
+    required: function() {  //ensures that paymentId is only required when the payment has been successfully completed.and status is paid
       return this.paymentStatus === "paid"
     }
   },

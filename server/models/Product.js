@@ -1,37 +1,37 @@
 import mongoose, { Schema } from "mongoose";
-
+// Product Schema
 const ProductSchema = new Schema(
   {
-    imageUrl: { type: String, required: true }, // Cloudinary image URL
-    imagePublicId: { type: String, required: true }, // Cloudinary public ID
+    imageUrl: { type: String, required: true },  // cloudinary imageurl
+    imagePublicId: { type: String, required: true }, // cloudinary publicid
     title: {
       type: String,
       required: true,
-      unique: true, // ✅ Prevent duplicate product titles
+      unique: true,
       trim: true,
     },
     description: {
       type: String,
-      required: true, // ✅ Ensure every product has a description
+      required: true,
     },
     category: {
       type: String,
-      required: true, // ✅ Products should have a category
+      required: true,
       trim: true,
     },
-    brand: { 
+    brand: {
       type: String,
-      required: true, // ✅ Specify the brand (especially in marketplaces)
+      required: true,
       trim: true,
     },
     price: {
       type: Number,
-      required: true, // ✅ Every product must have a price
-      min: 0, // 🔹 Prevent negative prices
+      required: true,
+      min: 0,
     },
     salePrice: {
       type: Number,
-      min: 0, // 🔹 Prevent negative discount prices
+      min: 0,
       validate: {
         validator: function (value) {
           return !value || value < this.price;
@@ -41,14 +41,14 @@ const ProductSchema = new Schema(
     },
     totalStock: {
       type: Number,
-      required: true, // ✅ Ensure stock quantity is defined
-      min: 0, // 🔹 Prevent negative stock values
+      required: true,
+      min: 0,
     },
     averageReview: {
       type: Number,
       min: 1,
-      max: 5, // ✅ Keep review scores between 1-5
-      default: 0, // 🔹 Start with 0 reviews
+      max: 5,
+      default: 0,
     },
   },
   { timestamps: true }

@@ -196,55 +196,55 @@ const getAllOrdersByUser = async (req, res) => {
           });
         }
     
-    // Fetch orders using aggregation
-    const orders = await Order.aggregate([
-      { $match: { userId: mongoose.Types.ObjectId(userId) } },
-      {
-        $lookup: {
-          from: 'products',
-          localField: 'cartItems.productId',
-          foreignField: '_id',
-          as: 'productDetails',
-        }
-      },
-      {
-        $project: {
-          _id: 1,
-          userId: 1,
-          cartId: 1,
-          cartItems: {
-            $match: {
-              input: '$cartItems',
-              as: 'item',
-              in: {
-                productId: '$$item.productId',
-                quantity: '$$item.quantity',
-                productDetails: {
-                  $arrayElemAt: [
-                    {
-                      $filter: {
-                        input: '$productDetails',
-                        as: 'product',
-                        cond: { $eq: ['$$product._id', '$$item.productId',] }
+       // Fetch orders using aggregation
+       const orders = await Order.aggregate([
+        { $match: { userId: mongoose.Types.ObjectId(userId) } }, // Match orders by userId
+        {
+          $lookup: {
+            from: 'products', // Join with the products collection
+            localField: 'cartItems.productId',
+            foreignField: '_id',
+            as: 'productDetails',
+          },
+        },
+        {
+          $project: {
+            _id: 1,
+            userId: 1,
+            cartId: 1,
+            cartItems: {
+              $map: {
+                input: '$cartItems',
+                as: 'item',
+                in: {
+                  productId: '$$item.productId',
+                  quantity: '$$item.quantity',
+                  productDetails: {
+                    $arrayElemAt: [  //arrayElemAt: [ ..., 0 ]: Takes the first matched product (if any).
+                      {
+                        $filter: {
+                          input: '$productDetails',
+                          as: 'product',
+                          cond: { $eq: ['$$product._id', '$$item.productId'] },
+                        },
                       },
-                    },
-                    0,
-                  ],
+                      0,
+                    ],
+                  },
                 },
               },
             },
+            addressInfo: 1,
+            orderStatus: 1,
+            paymentStatus: 1,
+            totalAmount: 1,
+            paymentId: 1,
+            payerId: 1,
+            createdAt: 1,
+            updatedAt: 1,
           },
-          addressInfo: 1,
-          orderStatus: 1,
-          paymentStatus: 1,
-          totalAmount: 1,
-          paymentId: 1,
-          payerId: 1,
-          createdAt: 1,
-          updatedAt: 1,
         },
-      },
-    ]);    
+      ]);
 
     if (!orders.length) {
       return res.status(404).json({
