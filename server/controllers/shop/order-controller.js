@@ -9,9 +9,9 @@ import { validationResult } from "express-validator";
 import logger from "../../utils/logger";
 import { capturePayment } from "@/store/shop/order-slice";
 import { UserCartItemsContent } from "@/components/shopping-view/cart-items-content";
-import { getAllOrdersByUserId } from '../../../client/src/store/shop/order-slice/index';
+import { getAllOrdersByUserId } from "../../../client/src/store/shop/order-slice/index";
 import mongoose from "mongoose";
-import { Input } from '@/components/ui/input';
+import { Input } from "@/components/ui/input";
 
 const createOrder = async (req, res) => {
   try {
@@ -188,85 +188,100 @@ const capturePayment = async (req, res) => {
 const getAllOrdersByUser = async (req, res) => {
   try {
     const { userId } = req.params;
-        // Validate input
-        if (!userId) {
-          return res.status(400).json({
-            success: false,
-            message: 'userId is required.',
-          });
-        }
-    
-       // Fetch orders using aggregation
-       const orders = await Order.aggregate([
-        { $match: { userId: mongoose.Types.ObjectId(userId) } }, // Match orders by userId
-        {
-          $lookup: {
-            from: 'products', // Join with the products collection
-            localField: 'cartItems.productId',
-            foreignField: '_id',
-            as: 'productDetails',
-          },
-        },
-        {
-          $project: {
-            _id: 1,
-            userId: 1,
-            cartId: 1,
-            cartItems: {
-              $map: {
-                input: '$cartItems',
-                as: 'item',
-                in: {
-                  productId: '$$item.productId',
-                  quantity: '$$item.quantity',
-                  productDetails: {
-                    $arrayElemAt: [  //arrayElemAt: [ ..., 0 ]: Takes the first matched product (if any).
-                      {
-                        $filter: {
-                          input: '$productDetails',
-                          as: 'product',
-                          cond: { $eq: ['$$product._id', '$$item.productId'] },
-                        },
-                      },
-                      0,
-                    ],
-                  },
+    // Validate input
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: "userId is required.",
+      });
+    }
+
+    // Fetch orders using aggregation
+    const orders = await Order.aggregate([
+      { $match: { userId: mongoose.Types.ObjectId(userId) } }, // Match orders by userId
+      {
+        $lookup: {
+          from: "products", // Join with the products collection
+          let: { cartItems: "$cartItems" }, // Define variables for the pipeline
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $in: ["$_id", "$$cartItems.productId"], // Match products in cartItems
                 },
               },
             },
-            addressInfo: 1,
-            orderStatus: 1,
-            paymentStatus: 1,
-            totalAmount: 1,
-            paymentId: 1,
-            payerId: 1,
-            createdAt: 1,
-            updatedAt: 1,
-          },
+            {
+              $project: {
+                _id: 1,
+                title: 1,
+                price: 1,
+                salePrice: 1,
+                image: 1,
+              },
+            },
+          ],
+          as: "productDetails", // Store the result in productDetails
         },
-      ]);
-
+      },
+      {
+        $project: {
+          _id: 1,
+          userId: 1,
+          cartId: 1,
+          cartItems: {
+            $map: {
+              input: "$cartItems",
+              as: "item",
+              in: {
+                productId: "$$item.productId",
+                quantity: "$$item.quantity",
+                productDetails: {
+                  $arrayElemAt: [
+                    {
+                      $filter: {
+                        input: "$productDetails",
+                        as: "product",
+                        cond: { $eq: ["$$product._id", "$$item.productId"] },
+                      },
+                    },
+                    0,
+                  ],
+                },
+              },
+            },
+          },
+          addressInfo: 1,
+          orderStatus: 1,
+          paymentStatus: 1,
+          totalAmount: 1,
+          paymentId: 1,
+          payerId: 1,
+          createdAt: 1,
+          updatedAt: 1,
+        },
+      },
+    ]);
     if (!orders.length) {
       return res.status(404).json({
         success: false,
-        message: 'No orders found for this user.',
+        message: "No orders found for this user.",
       });
     }
-  // Return success response
-  logger.info('The orders are')
-  res.status(200).json({
-    success: true,
-    data: orders,
-  });
-
+    // Return success response
+    logger.info("The orders are");
+    res.status(200).json({
+      success: true,
+      data: orders,
+    });
   } catch (error) {
     logger.error("error fetching orders", error);
-    return    res.status(500).json({
+    return res.status(500).json({
       success: false,
-      message: 'An error occurred while capturing the payment.',
+      message: "An error occurred while capturing the payment.",
     });
   }
-}
+};
 
 const getOrderDetails = async (req, res) => {
   try {
