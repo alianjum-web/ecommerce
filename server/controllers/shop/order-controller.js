@@ -7,6 +7,8 @@ import Cart from "../../models/Cart";
 import Product from "../../models/Product";
 import { validationResult } from "express-validator";
 import logger from "../../utils/logger";
+import { capturePayment } from "@/store/shop/order-slice";
+import { UserCartItemsContent } from "@/components/shopping-view/cart-items-content";
 
 const createOrder = async (req, res) => {
   try {
@@ -20,7 +22,7 @@ const createOrder = async (req, res) => {
         errors: errors.array(),
       });
     }
-    
+
     const {
       userId,
       cartId,
@@ -110,51 +112,72 @@ const createOrder = async (req, res) => {
 const capturePayment = async (req, res) => {
   try {
     const { paymentId, payerId, orderId } = req.body;
-
-    let order = await Order.findById(orderId);
-
-    if (!order) {
-      return res.status(404).json({
+    // Validate input
+    if (!paymentId || !payerId || !orderId) {
+      logger.error("invalid inout data");
+      return res.status(400).json({
         success: false,
-        message: "Order can not be found",
+        message: "payementId, payerId, and orderId are required.",
       });
     }
 
+    // Find the order
+    const order = await Order.findById(orderId);
+    if (!order) {
+      logger.warn("Ordernot found");
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
+
+    //Update order details and payment details
     order.paymentStatus = "paid";
     order.orderStatus = "confirmed";
     order.paymentId = paymentId;
     order.payerId = payerId;
 
-    for (let item of order.cartItems) {
-      let product = await Product.findById(item.productId);
-
+    //Uppdate product stock
+    for (const item of order.cartItems) {
+      const product = await Product.findById(item.productId);
       if (!product) {
+        logger.error("Product not found");
         return res.status(404).json({
           success: false,
-          message: `Not enough stock for this product ${product.title}`,
+          message: `Product not found: ${item.productId}`,
         });
       }
 
-      product.totalStock -= item.quantity;
+      if (product.totalStock < item.quantity) {
+        logger.warn("Not enough dtock for product: ", product.title);
+        return res.status(400).json({
+          success: false,
+          message: `Not eough stcok for product: ${product.title}`,
+        });
+      }
 
+      // Product stock
+      product.totalStock -= item.quantity;
       await product.save();
     }
 
-    const getCartId = order.cartId;
-    await Cart.findByIdAndDelete(getCartId);
+    // Deelete the cart
+    await Cart.findByIdAndDelete(order.cartId);
 
+    // save the updated order
     await order.save();
 
-    res.status(200).json({
+    logger.warn("Order confirmed successfully");
+    return res.status(200).json({
       success: true,
-      message: "Order confirmed",
+      message: "Order confirmed successfully",
       data: order,
     });
-  } catch (e) {
-    console.log(e);
+  } catch (error) {
+    logger.error(`Error capturing payment ${error}`);
     res.status(500).json({
       success: false,
-      message: "Some error occured!",
+      message: "An error occurred while capturing the payment.",
     });
   }
 };
