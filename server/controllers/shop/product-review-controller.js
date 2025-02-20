@@ -1,67 +1,95 @@
 import Order from"../../models/Order";
 import Product  from"../../models/Product";
 import ProductReview from"../../models/Review";
+import logger from '../../utils/logger';
+import mongoose from "mongoose";
+import { reducer } from '../../../client/src/components/ui/use-toast';
 
 const addProductReview = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction(); // we create the sesion if any of the operation of the session fails than all the operations are terminated
   try {
-    const { productId, userId, userName, reviewMessage, reviewValue } =
-      req.body;
+    const { productId, userId, userName, reviewMessage, reviewValue } = req.body;
+      // Validate input
+      if (
+        !mongoose.Types.ObjectId.isValid(productId) ||
+        !mongoose.Types.ObjectId.isValid(userId)
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid product or user ID.",
+        });
+      }
 
-    const order = await Order.findOne({
-      userId,
-      "cartItems.productId": productId,
-      // orderStatus: "confirmed" || "delivered",
-    });
+      //check if the user has purchased the order 
+      const order = await Order.findOne({
+        userId,
+        "cartItem.productId": productId,
+        orderStatus: { $in: ["confirmed", "delivered"] },// Only allow reviews for confirmed or delivered orders
+      }).session(session);
 
-    if (!order) {
-      return res.status(403).json({
-        success: false,
-        message: "You need to purchase product to review it.",
-      });
-    }
+      if (!order) {
+        return res.status(403).json({
+          success: false,
+          message: "You need to purchase the product to review it"
+        })
+      }
+      // check if user already reviewd the product
+      const existingReview = await ProductReview.findOne({
+        productId,
+        userId,
+      }).session(session);
+      
+      if (existingReview) {
+        return res.status(400).json({
+          success: false,
+          message: "You have already reviewed this product.",
+        });
+      }
 
-    const checkExistinfReview = await ProductReview.findOne({
-      productId,
-      userId,
-    });
-
-    if (checkExistinfReview) {
-      return res.status(400).json({
-        success: false,
-        message: "You already reviewed this product!",
-      });
-    }
-
-    const newReview = new ProductReview({
-      productId,
-      userId,
-      userName,
-      reviewMessage,
+      // Create a new review
+      const newReview = new ProductReview({
+        productId,
+        userId,
+        userName,
+        reviewMessage,
       reviewValue,
-    });
+      })
+      await newReview.save({session});
 
-    await newReview.save();
+      // Calculare teh new average review for hte product 
+      const reviews = await ProductReview.find({ productId }).session(session);
+      const totalReviews = reviews.length;
+      const averageReview = reviews.reduce((sum, review) => sum + review.reviewValue, 0) / totalReviews;
 
-    const reviews = await ProductReview.find({ productId });
-    const totalReviewsLength = reviews.length;
-    const averageReview =
-      reviews.reduce((sum, reviewItem) => sum + reviewItem.reviewValue, 0) /
-      totalReviewsLength;
+      //Update teh product average review 
+      await Product.findByIdAndUpdate(
+        productId,
+        { averageReview },
+        { session }
+      );
 
-    await Product.findByIdAndUpdate(productId, { averageReview });
-
+      // commit the transaction
+    await session.commitTransaction();
+    session.endSession();  
+    // Return success response
+    logger.info(`Review added successfully for product: ${productId}`);
     res.status(201).json({
       success: true,
       data: newReview,
     });
-  } catch (e) {
-    console.log(e);
+  } catch (error) {
+    // Rollback the transaction if error occured
+    await session.abortTransaction();
+    session.endSession();
+
+    logger.error("Error adding product review:", error );
     res.status(500).json({
       success: false,
-      message: "Error",
-    });
+      message: "Internal server error",
+    })
   }
-};
+}
 
 const getProductReviews = async (req, res) => {
   try {
