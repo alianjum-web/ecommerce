@@ -1,60 +1,59 @@
 import mongoose from "mongoose";
 import Product from "../../models/Product";
 
+// get filterd products based on category, brand and sorting order
 const getFilteredProducts = async (req, res) => {
   try {
-    const { category = [], brand = [], sortBy = "price-lowtohigh" } = req.query;
+    const { category = "", brand = "", sortBy = "price-lowtohingh" } = req.query;
 
     let filters = {};
 
-    if (category.length) {
-      filters.category = { $in: category.split(",") };
+    if (category) {
+      filters.category = { $in: category.split(",") }; // split comma-separated values into an array
     }
 
-    if (brand.length) {
-      filters.brand = { $in: brand.split(",") };
-    }
+        // Filter by brand (if provided)
+        if (brand) {
+          filters.brand = { $in: brand.split(",") }; // Split comma-separated values into an array
+        } 
+  // build  sort object
 
-    let sort = {};
+  let sort = {};
 
-    switch (sortBy) {
-      case "price-lowtohigh":
-        sort.price = 1;
+  switch (sortBy) {
+    case "price-lowtohigh":
+      sort.price = 1; // Sort by price in ascending order
+      break;
+    case "price-hightolow": 
+    sort.price = -1; // by price descending order  
+    break;
+    case "title-atoz": 
+    sort.price = 1; // by price descending order  
+    break;
+    case "title-ztoa": 
+    sort.price = -1; // by price descending order  
+    break;
+    default: 
+    sort.price = 1; // Default to sorting by price in ascending order
+    break;
+  }
 
-        break;
-      case "price-hightolow":
-        sort.price = -1;
+  const products = await Product.find(filters).sort(sort);
 
-        break;
-      case "title-atoz":
-        sort.title = 1;
+  logger.info(`Fetched ${products.length} products with filters: ${JSON.stringify(filters)}`);
+res.status(200).json({
+  success: true,
+  data: products,
+})
 
-        break;
-
-      case "title-ztoa":
-        sort.title = -1;
-
-        break;
-
-      default:
-        sort.price = 1;
-        break;
-    }
-
-    const products = await Product.find(filters).sort(sort);
-
-    res.status(200).json({
-      success: true,
-      data: products,
-    });
-  } catch (e) {
-    console.log(error);
+  } catch (error) {
+    logger.error("Error fetching fitered products");
     res.status(500).json({
       success: false,
-      message: "Some error occured",
-    });
+      message: "Internal sever error",
+    })
   }
-};
+}
 
 const getProductDetails = async (req, res) => {
   try {
