@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import Product from "../../models/Product";
 
 const getFilteredProducts = async (req, res) => {
@@ -58,6 +59,14 @@ const getFilteredProducts = async (req, res) => {
 const getProductDetails = async (req, res) => {
   try {
     const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(404).json({
+        success: false,
+        message: "Invalid id of product"
+      })
+    }
+
     const product = await Product.findById(id);
 
     if (!product)
