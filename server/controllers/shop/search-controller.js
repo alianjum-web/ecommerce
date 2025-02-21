@@ -1,18 +1,26 @@
 import Product from "../../models/Product";
+import logger from "../../utils/logger";
+import searchProducts from "./search-controller";
+import { getSearchResults } from "../../../client/src/store/shop/search-slice/index";
 
 const searchProducts = async (req, res) => {
   try {
     const { keyword } = req.params;
-    if (!keyword || typeof keyword !== "string") {
-      return res.status(400).json({
-        succes: false,
-        message: "Keyword is required and must be in string format",
+    // validate keyword
+    if (!keyword || typeof keyword != "string" || keyword.trim() === "") {
+      return res.status(404).json({
+        success: false,
+        message: "Keyword is required and must not be an empty string",
       });
     }
 
-    const regEx = new RegExp(keyword, "i");
+    // sentize the keyword
+    const sanitizedKeyword = keyword.replace(/[^\w\s]/gi, ""); // remove special character by space
 
-    const createSearchQuery = {
+    const regEx = new RegExp(sanitizedKeyword);
+
+    //build search query
+    const searchQuery = {
       $or: [
         { title: regEx },
         { description: regEx },
@@ -21,17 +29,20 @@ const searchProducts = async (req, res) => {
       ],
     };
 
-    const searchResults = await Product.find(createSearchQuery);
-
+    const searchResults = await Product.find(searchQuery);
+    //  return success repsonse
+    logger.info(
+      `Found ${searchResults.length} products for keyword: ${sanitizedKeyword}`
+    );
     res.status(200).json({
       success: true,
       data: searchResults,
     });
   } catch (error) {
-    console.log(error);
+    logger.error(`Error searching products:`, error);
     res.status(500).json({
       success: false,
-      message: "Error",
+      message: "Internal server error",
     });
   }
 };
