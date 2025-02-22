@@ -1,6 +1,8 @@
 import paypal from 'paypal-rest-sdk';
 import logger from '../utils/logger.js';
+import dotenv from 'dotenv';
 
+dotenv.config();
 
 const requiredEnvars = ['PAYPAL_CLIENT_ID', 'PAYPAL_CLIENT_SECRET'];
 for (const enVars of requiredEnvars) {
