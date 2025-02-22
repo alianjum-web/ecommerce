@@ -1,5 +1,5 @@
-import paypal, { payment } from 'paypal-rest-sdk';
-import logger from './logger';
+import paypal from 'paypal-rest-sdk';
+import logger from '../utils/logger.js';
 
 
 const requiredEnvars = ['PAYPAL_CLIENT_ID', 'PAYPAL_CLIENT_SECRET'];

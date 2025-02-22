@@ -3,18 +3,18 @@ import mongoose from "mongoose";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import dotenv from "dotenv";
-import authRouter from "./routes/auth/auth-routes";
-import adminProductsRouter from "./routes/admin/products-routes";
-import adminOrderRouter from "./routes/admin/order-routes";
+import authRouter from "./routes/auth/auth-routes.js";
+import adminProductsRouter from "./routes/admin/products-routes.js";
+import adminOrderRouter from "./routes/admin/order-routes.js";
 
-import shopProductsRouter from "./routes/shop/products-routes";
-import shopCartRouter from "./routes/shop/cart-routes";
-import shopAddressRouter from "./routes/shop/address-routes";
-import shopOrderRouter from "./routes/shop/order-routes";
-import shopSearchRouter from "./routes/shop/search-routes";
-import shopReviewRouter from "./routes/shop/review-routes";
+import shopProductsRouter from "./routes/shop/products-routes.js";
+import shopCartRouter from "./routes/shop/cart-routes.js";
+import shopAddressRouter from "./routes/shop/address-routes.js";
+import shopOrderRouter from "./routes/shop/order-routes.js";
+import shopSearchRouter from "./routes/shop/search-routes.js";
+import shopReviewRouter from "./routes/shop/review-routes.js";
 
-import commonFeatureRouter from "./routes/common/feature-routes";
+import commonFeatureRouter from "./routes/common/feature-routes.js";
 
 //create a database connection -> u can also
 //create a separate file for this and then import/use that file here

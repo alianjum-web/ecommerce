@@ -1,8 +1,7 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import User from "../../models/User.js";
-import { registerUser } from "../../../client/src/store/auth-slice/index";
-import logger from "../../helpers/logger.js";
+import { User } from "../../models/User.js";
+import logger from "../../utils/logger.js";
 
 //register
 

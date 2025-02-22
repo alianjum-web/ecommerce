@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import Product from "../../models/Product";
+import {Product} from "../../models/Product.js";
 
 // get filterd products based on category, brand and sorting order
 const getFilteredProducts = async (req, res) => {

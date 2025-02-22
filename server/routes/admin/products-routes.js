@@ -6,9 +6,9 @@ import {
   editProduct,
   fetchAllProducts,
   deleteProduct,
-} from "../../controllers/admin/products-controller";
+} from "../../controllers/admin/products-controller.js";
 
-import { upload } from "../../helpers/cloudinary";
+import { upload } from "../../helpers/cloudinary.js";
 
 const router = express.Router();
 

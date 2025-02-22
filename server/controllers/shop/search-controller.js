@@ -1,7 +1,5 @@
-import Product from "../../models/Product";
-import logger from "../../utils/logger";
-import searchProducts from "./search-controller";
-import { getSearchResults } from "../../../client/src/store/shop/search-slice/index";
+import {Product} from "../../models/Product.js";
+import logger from "../../utils/logger.js";
 
 const searchProducts = async (req, res) => {
   try {

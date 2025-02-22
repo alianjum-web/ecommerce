@@ -2,7 +2,7 @@ import express from 'express';
 import {
   addFeatureImage,
   getFeatureImages,
-} from "../../controllers/common/feature-controller";
+} from "../../controllers/common/feature-controller.js";
 
 const router = express.Router();
 

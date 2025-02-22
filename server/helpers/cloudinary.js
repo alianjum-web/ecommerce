@@ -1,8 +1,7 @@
 import multer from "multer";
 import sharp from "sharp";
 import cloudinary from "cloudinary";
-import multer from 'multer';
-import logger from "../utils/logger";
+import logger from "../utils/logger.js";
 
 // Configure Cloudinary for image hosting
 cloudinary.v2.config({

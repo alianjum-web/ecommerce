@@ -5,7 +5,7 @@ import {
   getAllOrdersByUser,
   getOrderDetails,
   capturePayment,
-} from "../../controllers/shop/order-controller";
+} from "../../controllers/shop/order-controller.js";
 
 const router = express.Router();
 

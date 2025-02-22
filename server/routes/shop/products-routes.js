@@ -3,7 +3,7 @@ import express from 'express';
 import {
   getFilteredProducts,
   getProductDetails,
-} from "../../controllers/shop/products-controller";
+} from "../../controllers/shop/products-controller.js";
 
 const router = express.Router();
 

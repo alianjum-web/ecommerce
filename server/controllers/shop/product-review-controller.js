@@ -1,9 +1,8 @@
-import Order from "../../models/Order";
-import Product from "../../models/Product";
-import ProductReview from "../../models/Review";
-import logger from "../../utils/logger";
+import {Order} from "../../models/Order.js";
+import {Product} from "../../models/Product.js";
+import {ProductReview} from "../../models/Review.js";
+import logger from "../../utils/logger.js";
 import mongoose from "mongoose";
-import { useSearchParams } from "react-router-dom";
 
 const addProductReview = async (req, res) => {
   const session = await mongoose.startSession();

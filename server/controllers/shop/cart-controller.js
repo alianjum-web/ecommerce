@@ -1,6 +1,6 @@
-import Cart from "../../models/Cart";
-import Product from "../../models/Product";
-import logger from "../../utils/logger";
+import {Cart} from "../../models/Cart.js";
+import {Product} from "../../models/Product.js";
+import logger from "../../utils/logger.js";
 
 const addToCart = async (req, res) => {
   try {

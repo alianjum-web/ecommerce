@@ -1,6 +1,6 @@
-import Feature from "../../models/Feature";
-import { imageUploadUtil } from "../../helpers/cloudinary";
-import logger from "../../utils/logger";
+import {Feature} from "../../models/Feature.js";
+import { imageUploadUtil } from "../../helpers/cloudinary.js";
+import logger from "../../utils/logger.js";
 
 const addFeatureImage = async (req, res) => {
   try {

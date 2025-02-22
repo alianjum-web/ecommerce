@@ -1,10 +1,8 @@
-import { imageUploadUtil, deleteImageFromCloudinary } from "../../helpers/cloudinary";
-import Product from "../../models/Product";
-import { validateFile } from "../../utils/fileValidation"; // Utility for file validation
+import { imageUploadUtil, deleteImageFromCloudinary } from "../../helpers/cloudinary.js";
+import {Product} from "../../models/Product.js";
+import { validateFile } from "../../utils/fileValidation.js"; // Utility for file validation
 import { validationResult } from "express-validator";
-import logger from "../../utils/logger";
-import { editProduct } from "../../../client/src/store/admin/products-slice/index";
-import { logoutUser } from '../../../client/src/store/auth-slice/index';
+import logger from "../../utils/logger.js";
 
 const handleImageUpload = async (req, res) => {
   try {
@@ -19,7 +17,7 @@ const handleImageUpload = async (req, res) => {
 
     //Validate file type and size
     const validationError = validateFile(req.file); // validateFile if return null means falsy.
-    if (validationError) {
+    if (!validationError) {
       return res.status(400).json({
         success: false,
         message: validationError,
@@ -47,7 +45,7 @@ const handleImageUpload = async (req, res) => {
 const addProduct = async (req, res) => {
   try {
     const {
-      image,
+      imageUrl,
       title,
       description,
       category,
@@ -67,7 +65,7 @@ const addProduct = async (req, res) => {
     }
 
     const newlyCreatedProduct = new Product({
-      image,
+      imageUrl,
       title,
       description,
       category,

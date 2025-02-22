@@ -1,17 +1,13 @@
 import {
   createPayPalPayment,
   getPayPalApprovalURL,
-} from "../../helpers/paypal";
-import Order from "../../models/Order";
-import Cart from "../../models/Cart";
-import Product from "../../models/Product";
+} from "../../helpers/paypal.js";
+import {Order} from "../../models/Order.js";
+import {Cart} from "../../models/Cart.js";
+import {Product} from "../../models/Product.js";
 import { validationResult } from "express-validator";
-import logger from "../../utils/logger";
-import { capturePayment } from "@/store/shop/order-slice";
-import { UserCartItemsContent } from "@/components/shopping-view/cart-items-content";
-import { getAllOrdersByUserId } from "../../../client/src/store/shop/order-slice/index";
+import logger from "../../utils/logger.js";
 import mongoose from "mongoose";
-import { Input } from "@/components/ui/input";
 
 const createOrder = async (req, res) => {
   try {

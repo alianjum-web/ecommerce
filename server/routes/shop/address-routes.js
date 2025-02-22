@@ -5,7 +5,7 @@ import {
   fetchAllAddress,
   editAddress,
   deleteAddress,
-} from "../../controllers/shop/address-controller";
+} from "../../controllers/shop/address-controller.js";
 
 const router = express.Router();
 
