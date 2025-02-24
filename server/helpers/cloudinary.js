@@ -2,6 +2,8 @@ import multer from "multer";
 import sharp from "sharp";
 import cloudinary from "cloudinary";
 import logger from "../utils/logger.js";
+import dotenv from "dotenv";
+dotenv.config();
 
 // Configure Cloudinary for image hosting
 cloudinary.v2.config({
@@ -32,47 +34,45 @@ const upload = multer({
   @throws {Error} - If the upload fails.
  */
 async function imageUploadUtil(fileBuffer) {
-  // Validate input
   if (!fileBuffer || !Buffer.isBuffer(fileBuffer)) {
     throw new Error('Invalid file buffer: The provided file is not a valid image.');
   }
 
   try {
-    // Resize and convert image using sharp
+    // console.log("Optimizing image with sharp...");
     const optimizedImageBuffer = await sharp(fileBuffer)
-      .resize(800, 800, { fit: 'inside', withoutEnlargement: true }) // Resize without enlarging
-      .toFormat('webp', { quality: 80 }) // Convert to WEBP with 80% quality
+      .resize(800, 800, { fit: 'inside', withoutEnlargement: true }) 
+      .toFormat('webp', { quality: 80 })
       .toBuffer();
 
-    // Upload optimized image to Cloudinary
+    // console.log("Optimized image buffer ready, uploading to Cloudinary...");
+
     return new Promise((resolve, reject) => {
       const uploadStream = cloudinary.v2.uploader.upload_stream(
         {
           resource_type: 'image',
-          folder: 'ecommerce-products', // Organize images in a folder
+          folder: 'ecommerce-products',
         },
         (error, result) => {
           if (error) {
-            logger.error('Cloudinary upload error:', error);
+            // console.error('Cloudinary upload error:', error);
             reject(new Error('Failed to upload image to Cloudinary. Please try again.'));
           } else {
-            logger.info('Image uploaded successfully:', result.public_id);
-            resolve({
-              url: result.secure_url,
-              publicId: result.public_id, // Store this in the database
-            });
+            // console.log('Cloudinary upload successful:', result);
+            resolve({ url: result.secure_url, publicId: result.public_id });
           }
         }
       );
 
-      // Send the optimized image to Cloudinary
       uploadStream.end(optimizedImageBuffer);
     });
+
   } catch (error) {
-    logger.error('Image optimization error:', error);
+    // console.error('Image optimization error:', error);
     throw new Error('Failed to optimize image. Please ensure the file is a valid image.');
   }
 }
+
 
 /*
 * Deletes an image from Cloudinary using its public ID.

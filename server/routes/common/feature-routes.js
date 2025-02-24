@@ -3,10 +3,12 @@ import {
   addFeatureImage,
   getFeatureImages,
 } from "../../controllers/common/feature-controller.js";
+import { upload } from '../../helpers/cloudinary.js';
+
 
 const router = express.Router();
 
-router.post("/add", addFeatureImage);
+router.post("/add", upload.single("image"), addFeatureImage);
 router.get("/get", getFeatureImages);
 
 export default router;

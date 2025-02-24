@@ -4,31 +4,29 @@ import logger from "../../utils/logger.js";
 
 const addFeatureImage = async (req, res) => {
   try {
-    // Check if a file was uploaded
+    console.log("Received file:", req.file);
+
     if (!req.file) {
       logger.warn("No image file provided");
-      return res.status(400).json({
-        success: false,
-        message: "Image file is required",
-      });
+      return res.status(400).json({ success: false, message: "Image file is required" });
     }
-    // Upload the image to cloudinary
+
+    console.log("Uploading image buffer...");
     const { url, publicId } = await imageUploadUtil(req.file.buffer);
-    // save the image URL and publicID to DB
-    const featureImage = new Feature({
-      imageUrl: url,
-      imagePublicId: publicId,
-    });
+    console.log("Image uploaded successfully:", { url, publicId });
+
+    console.log("Saving image to database...");
+    const featureImage = new Feature({ imageUrl: url, imagePublicId: publicId });
 
     await featureImage.save();
-    // Return success response
+    console.log("Image saved in DB:", featureImage);
+
     logger.info(`Feature image added successfully: ${featureImage._id}`);
-    res.status(201).json({
-      success: true,
-      data: featureImage,
-    });
+    res.status(201).json({ success: true, data: featureImage });
+
   } catch (e) {
-    logger.error("Error adding feature image:", error);
+    console.error("Error adding feature image:", e);
+    logger.error("Error adding feature image:", e);
     res.status(500).json({
       success: false,
       message: "Internal server error",
