@@ -24,13 +24,13 @@ const handleImageUpload = async (req, res) => {
       });
     }
 
-    const b64 = Buffer.from(req.file.buffer).toString("base64");
-    const url = `data:${req.file.mimetype};base64,${b64}`;
-    const result = await imageUploadUtil(url);
-
+    const result = await imageUploadUtil(req.file.buffer);
+console.log(result);
+    // Return the cloudinary URL and publicID to the frontend
     res.status(200).json({
       success: true,
-      result,
+      imageUrl: result.url,
+      imagePublicId: result.publicId
     });
   } catch (error) {
     logger.error("Error uploading image.", error);
@@ -46,6 +46,7 @@ const addProduct = async (req, res) => {
   try {
     const {
       imageUrl,
+      imagePublicId,
       title,
       description,
       category,
@@ -65,15 +66,11 @@ const addProduct = async (req, res) => {
         errors: errors.array(),
       });
     }
-    // if (!title || !category || !price || !brand || !totalStock) {
-    //   return res.status(400).json({
-    //     success: false,
-    //     message: 'Title, category, and price are required fields.',
-    //   });
-    // }
+    
 
     const newlyCreatedProduct = new Product({
       imageUrl,
+      imagePublicId,
       title,
       description,
       category,
