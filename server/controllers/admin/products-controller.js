@@ -25,7 +25,7 @@ const handleImageUpload = async (req, res) => {
     }
 
     const b64 = Buffer.from(req.file.buffer).toString("base64");
-    const url = `data:${req.file.minetype};base64,${b64}`;
+    const url = `data:${req.file.mimetype};base64,${b64}`;
     const result = await imageUploadUtil(url);
 
     res.status(200).json({
@@ -56,13 +56,21 @@ const addProduct = async (req, res) => {
       averageReview,
     } = req.body;
 
-
-    if (!title || !category || !price || !brand || !totalStock) {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      logger.warn("Validate errorrs:", errors.array());
       return res.status(400).json({
         success: false,
-        message: 'Title, category, and price are required fields.',
+        message: "Validation errors",
+        errors: errors.array(),
       });
     }
+    // if (!title || !category || !price || !brand || !totalStock) {
+    //   return res.status(400).json({
+    //     success: false,
+    //     message: 'Title, category, and price are required fields.',
+    //   });
+    // }
 
     const newlyCreatedProduct = new Product({
       imageUrl,
