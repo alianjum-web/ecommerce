@@ -74,32 +74,34 @@ const deleteFeatureImage = async (req, res) => {
     }
 
     const featureImage = await Feature.findById(id);
-    if (!image) {
-      logger.warn("image does not exist");
+    if (!featureImage) {  // ✅ Correct variable name
+      logger.warn("Image does not exist");
       return res.status(404).json({
         success: false,
-        message: "Image doesnot exist"
-      })
+        message: "Image does not exist",
+      });
     }
 
-    if (image.imagePublicId) {
-      await deleteImageFromCloudinary(featureImage.imagePublicId);
-      logger.info(`image deleted from cloudinary with publicId:${imagePublicId} successfully`)
+    if (featureImage.imagePublicId) {
+      await deleteImageFromCloudinary(featureImage.imagePublicId);  // ✅ Correct variable name
+      logger.info(`Image deleted from Cloudinary with publicId: ${featureImage.imagePublicId} successfully`);
     }
 
-    await Feature.findByIdAndDelete(id)
-    logger.info(`Feature Image deleted successfully: ${id}`)
+    await Feature.findByIdAndDelete(id);
+    logger.info(`Feature Image deleted successfully: ${id}`);
+
     res.status(200).json({
       success: true,
-      message: "FeatureIMage deleted successfully"
-    })
+      message: "Feature Image deleted successfully",
+    });
   } catch (error) {
-    logger.error("Error occured while deleteing feature image", error);
+    logger.error("Error occurred while deleting feature image", error);
     res.status(500).json({
       success: false,
-      message: "Some error encountered while deleted feature image!",
+      message: "Some error encountered while deleting feature image!",
     });
   }
 };
+
 
 export { addFeatureImage, getFeatureImages, deleteFeatureImage };
