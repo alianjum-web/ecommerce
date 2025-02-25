@@ -66,16 +66,24 @@ const deleteFeatureImage = async (req, res) => {
   try {
     const { id } = req.params;
     if (!id) {
+      logger.warn("Invalid image id");
       return res.status(404).json({
         success: false,
-        message: "Image does not exist",
+        message: "Invalid image id",
       });
     }
 
-    const image = await Feature.findById(id);
+    const featureImage = await Feature.findById(id);
+    if (!image) {
+      logger.warn("image does not exist");
+      return res.status(404).json({
+        success: false,
+        message: "Image doesnot exist"
+      })
+    }
 
     if (image.imagePublicId) {
-      await deleteImageFromCloudinary(product.imagePublicId);
+      await deleteImageFromCloudinary(featureImage.imagePublicId);
       logger.info(`image deleted from cloudinary with publicId:${imagePublicId} successfully`)
     }
 

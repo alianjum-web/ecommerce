@@ -11,6 +11,6 @@ const router = express.Router();
 
 router.post("/add", upload.single("image"), addFeatureImage);
 router.get("/get", getFeatureImages);
-router.delete("delete/:id", deleteFeatureImage)
+router.delete("/delete/:id", deleteFeatureImage)
 
 export default router;
