@@ -4,7 +4,7 @@ import logger from "../../utils/logger.js";
 
 const addFeatureImage = async (req, res) => {
   try {
-    console.log("Received file:", req.file);
+    // console.log("Received file:", req.file);
 
     if (!req.file) {
       logger.warn("No image file provided");
@@ -13,23 +13,23 @@ const addFeatureImage = async (req, res) => {
         .json({ success: false, message: "Image file is required" });
     }
 
-    console.log("Uploading image buffer...");
+    // console.log("Uploading image buffer...");
     const { url, publicId } = await imageUploadUtil(req.file.buffer);
-    console.log("Image uploaded successfully:", { url, publicId });
+    // console.log("Image uploaded successfully:", { url, publicId });
 
-    console.log("Saving image to database...");
+    // console.log("Saving image to database...");
     const featureImage = new Feature({
       imageUrl: url,
       imagePublicId: publicId,
     });
 
     await featureImage.save();
-    console.log("Image saved in DB:", featureImage);
+    // console.log("Image saved in DB:", featureImage);
 
     logger.info(`Feature image added successfully: ${featureImage._id}`);
     res.status(201).json({ success: true, data: featureImage });
   } catch (e) {
-    console.error("Error adding feature image:", e);
+    // console.error("Error adding feature image:", e);
     logger.error("Error adding feature image:", e);
     res.status(500).json({
       success: false,
