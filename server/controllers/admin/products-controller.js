@@ -6,18 +6,19 @@ import logger from "../../utils/logger.js";
 
 const handleImageUpload = async (req, res) => {
   try {
-    //check file exists
+
+    // Check if file exists
     if (!req.file) {
-      logger.warn("file does not exists");
+      logger.warn("File does not exist");
       return res.status(400).json({
         success: false,
         message: "No file uploaded",
       });
     }
 
-    //Validate file type and size
-    const validationError = validateFile(req.file); // validateFile if return null means falsy.
-    if (!validationError) {
+    // Validate file type and size
+    const validationError = validateFile(req.file);
+    if (validationError) { 
       return res.status(400).json({
         success: false,
         message: validationError,
@@ -25,18 +26,17 @@ const handleImageUpload = async (req, res) => {
     }
 
     const result = await imageUploadUtil(req.file.buffer);
-console.log(result);
-    // Return the cloudinary URL and publicID to the frontend
+// console.log("Uploaded result: ", result);
     res.status(200).json({
       success: true,
       imageUrl: result.url,
-      imagePublicId: result.publicId
+      imagePublicId: result.publicId,
     });
   } catch (error) {
-    logger.error("Error uploading image.", error);
-    res.json({
+    logger.error("Error uploading image:", error);
+    res.status(500).json({
       success: false,
-      message: "Error occured",
+      message: "Error occurred",
     });
   }
 };
