@@ -1,10 +1,17 @@
-import {Cart} from "../../models/Cart.js";
-import {Product} from "../../models/Product.js";
+import mongoose from "mongoose";
+import { Cart } from "../../models/Cart.js";
+import { Product } from "../../models/Product.js";
 import logger from "../../utils/logger.js";
 
 const addToCart = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
-    const { userId, productId, quantity } = req.body;
+    // const { userId, productId, quantity } = req.body;
+    const userId = req.user.id; // get userId from JWT authnticated token
+    const { productId } = req.params;
+    const { quantity } = req.body;
     // validate input
 
     if (
@@ -30,12 +37,12 @@ const addToCart = async (req, res) => {
         message: "Product not found",
       });
     }
-    let cart = await Cart.findById({ userId });
-
-    if (!cart) {
-      cart = new Cart({ userId, items: [] });
-      logger.info(`New cart created for user: ${userId}`);
-    }
+    
+    const cart = await Cart.findOneAndUpdate(
+      { userId },
+      { $setOnInsert: { userId, items: [] } }, // create if not exist
+      { new: true, upsert: true, session } // Atomic operation
+    )
 
     // Check if the product already exist in the cart
     const productInCartExists = cart.items.findIndex(
@@ -51,7 +58,10 @@ const addToCart = async (req, res) => {
       cart.items[findCurrentProductIndex].quantity += quantity;
       logger.info(`Product quantity updated in cart : ${productId}`);
     }
-    await cart.save();
+    await cart.save({ session });
+
+    await session.commitTransaction();
+    session.endSession();
 
     // Return success responses
     logger.info(`Cart updated successfully for user: ${userId}`);
@@ -60,6 +70,8 @@ const addToCart = async (req, res) => {
       data: cart,
     });
   } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
     logger.error("Error while adding produt to cart", error);
     res.status(500).json({
       success: false,
