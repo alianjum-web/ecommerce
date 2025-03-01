@@ -293,7 +293,9 @@ const updateCartItemQty = async (req, res) => {
 const deleteCartItem = async (req, res) => {
   try {
     const { productId } = req.params;
-
+    console.log("productId is: ", productId);
+    const userId = req.user.id;
+    console.log(`Data of authenticated user is ${userId}`);
     //Validate input
     if (
       !userId ||
@@ -308,14 +310,14 @@ const deleteCartItem = async (req, res) => {
           "Invalid input data. Please provide valid userId and productId.",
       });
     }
-
+console.log("Going to work on updatedCart")
     // Remove product from cart
     const updatedCart = await Cart.findOneAndUpdate(
       { userId },
-      { $pull: { items: { productId } } }, // remove the product with productId
+      { $pull: { items: productId  } }, // remove the product with productId
       { new: true } // return modified document
     );
-
+console.log("updatedCart is: ", updatedCart)
     // If cart not found
     if (!updatedCart) {
       logger.warn("Cart not found");
@@ -323,8 +325,19 @@ const deleteCartItem = async (req, res) => {
         success: false,
         message: "Cart not found",
       });
-    }
-
+    };
+console.log("checking updatedcart")
+    // If cart is empty after decleration remove the entire cart
+    // if (updatedCart.items.length === 0) {
+    //   await Cart.deleteOne({ _id: updatedCart._id });
+    //   logger.info(`Cart deleted successfully for user ${userId}`);
+    //   return res.status(200).json({
+    //     success: true, 
+    //     message: "Cart was and ahs been deleted",
+    //     data: null
+    //   });
+    // }
+console.log(`Going to work on the cartWithDetails: ${cartWithDetails}`)
     // Use aggregation to fetch cart with product details
     const cartWithDetails = await Cart.aggregate([
       { $match: { _id: mongoose.Types.ObjectId(updatedCart._id) } },
@@ -336,7 +349,7 @@ const deleteCartItem = async (req, res) => {
           as: "productDetails",
         },
       },
-      { $unwind: "$productDetils" },
+      { $unwind: "$productDetails" },
       {
         $project: {
           _id: 1,
@@ -345,14 +358,14 @@ const deleteCartItem = async (req, res) => {
           "items.quantity": 1,
           "items.productDetails": {
             imageUrl: "$productDetails.imageUrl",
-            title: "productDetails.title",
+            title: "$productDetails.title",
             price: "$productDetails.price",
             salePrice: "$productDetails.salePrice",
           },
         },
       },
       {
-        $grpup: {
+        $group: {
           _id: "$id",
           userId: { $first: "$userId" }, // first ensures only one userId is taken per cart (since it's the same for all items).
           //  push collects all items of the cart into an array so that each cart has its products grouped together.
@@ -367,18 +380,10 @@ const deleteCartItem = async (req, res) => {
       },
     ]);
 
-    if (!cartWithDetails || cartWithDetails.length === 0) {
-      logger.warn("cart not found");
-      return res.status(404).json({
-        success: false,
-        message: "Cart not found",
-      });
-    }
-
     // Return teh updated cart
     res.status(200).json({
       success: true,
-      data: cartWithDetails[0],
+      data: cartWithDetails[0] || updatedCart, // In case the lookup fails, return updatedCart
     });
   } catch (error) {
     logger.error("Error deleting cart item:", error);
