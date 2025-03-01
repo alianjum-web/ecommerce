@@ -163,9 +163,6 @@ const updateCartItemQty = async (req, res) => {
     const {  quantity } = req.body;
     const { productId } = req.params;
     const  userId  = req.user.id;
-    console.log("Request user:", req.user);
-    console.log("Product ID from params:", req.params.productId);
-    console.log("Quantity from body:", req.body.quantity);
     
     // Validate input
     if (
@@ -206,24 +203,34 @@ const updateCartItemQty = async (req, res) => {
 
     // Update the quantity of the product
     cart.items[productIndex].quantity = quantity;
-
     // saved the updated cart
     await cart.save();
+    console.log("cart is: ", cart);
 
     // Use aggregation to fetch cart with product details
+    const userObjectId = new mongoose.Types.ObjectId(userId);
+
     const updatedCart = await Cart.aggregate([
-      // String received from request,so convert userId to ObjectId for match
-      { $match: { userId: mongoose.Types.ObjectId(userId) } },
+      // Convert userId string to ObjectId and match it
+      { $match: { userId: userObjectId } },
+      
+      // Deconstruct items array to handle each item separately
       { $unwind: "$items" },
+      
+      // Join products collection to get product details
       {
         $lookup: {
-          from: "products",
+          from: "products",  // Make sure this is the correct collection name
           localField: "items.productId",
           foreignField: "_id",
           as: "productDetails",
         },
       },
-      { $unwind: "$productDetails" },
+    
+      // Unwind productDetails (allow empty values to avoid errors)
+      { $unwind: { path: "$productDetails", preserveNullAndEmptyArrays: true } },
+    
+      // Restructure the output
       {
         $project: {
           _id: 1,
@@ -238,20 +245,21 @@ const updateCartItemQty = async (req, res) => {
           },
         },
       },
+    
+      // Re-group items back into an array under the userId
       {
         $group: {
           _id: "$_id",
           userId: { $first: "$userId" },
-          items: {
-            $push: {
-              productId: "$items.productId",
-              quantity: "$items.quantity",
-              productDetails: "$items.productDetails",
-            },
-          },
+          items: { $push: "$items" },
         },
       },
     ]);
+    
+     // Fetch the updated cart with product details using populate()
+    //  const updatedCart = await Cart.findOne({ userId }).populate("items.productId", "imageUrl title price salePrice");
+
+    console.log(" updated cart is: ", updatedCart);
     // If cart not found after aggregation
     if (!updatedCart || updatedCart.length === 0) {
       logger.error("Cart not found");
