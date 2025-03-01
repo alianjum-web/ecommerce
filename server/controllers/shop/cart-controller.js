@@ -160,8 +160,13 @@ const fetchCartItems = async (req, res) => {
 // updates the quantity of a product in a user's cart.
 const updateCartItemQty = async (req, res) => {
   try {
-    const { userId, productId, quantity } = req.body;
-
+    const {  quantity } = req.body;
+    const { productId } = req.params;
+    const  userId  = req.user.id;
+    console.log("Request user:", req.user);
+    console.log("Product ID from params:", req.params.productId);
+    console.log("Quantity from body:", req.body.quantity);
+    
     // Validate input
     if (
       !userId ||
