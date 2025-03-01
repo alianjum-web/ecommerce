@@ -48,7 +48,6 @@ const registerUser = async (req, res) => {
   }
 };
 
-//login
 // Constants for JWT and cookies
 const JWT_SECRET = process.env.JWT_SECRET || "default_secret_key"; // Use environment variable for JWT secret
 const COOKIE_OPTIONS = {
@@ -157,7 +156,7 @@ const authMiddleware = async (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded;
+    req.user = decoded;  // Attach user info to `req`
     next();
   } catch (error) {
     logger.error("Auth middleware: Invalid token", error);
