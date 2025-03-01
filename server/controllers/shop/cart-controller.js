@@ -6,7 +6,6 @@ import logger from "../../utils/logger.js";
 const addToCart = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
-
   try {
     // const { userId, productId, quantity } = req.body;
     const userId = req.user.id; // get userId from JWT authnticated token
@@ -37,12 +36,12 @@ const addToCart = async (req, res) => {
         message: "Product not found",
       });
     }
-    
+
     const cart = await Cart.findOneAndUpdate(
       { userId },
       { $setOnInsert: { userId, items: [] } }, // create if not exist
       { new: true, upsert: true, session } // Atomic operation
-    )
+    );
 
     // Check if the product already exist in the cart
     const productInCartExists = cart.items.findIndex(
@@ -55,7 +54,7 @@ const addToCart = async (req, res) => {
       logger.info(`Product added to cart: ${productId}`);
     } else {
       // Update quantity of existing product
-      cart.items[findCurrentProductIndex].quantity += quantity;
+      cart.items[productInCartExists].quantity += quantity;
       logger.info(`Product quantity updated in cart : ${productId}`);
     }
     await cart.save({ session });
@@ -94,10 +93,12 @@ const fetchCartItems = async (req, res) => {
     }
 
     const cartData = await Cart.aggregate([
-      // Match teh cart of given userId
-      { $match: { userId: mongoose.Types.ObjectId(userId) } },
-      // Unwind the items array to deal with each items separately
+      // Match the cart of given userId
+      { $match: { userId: new mongoose.Types.ObjectId(userId) } },
+
+      // Unwind the items array to deal with each item separately
       { $unwind: "$items" },
+
       // Look up to fetch the product details for each item in the cart
       {
         $lookup: {
@@ -109,30 +110,35 @@ const fetchCartItems = async (req, res) => {
       },
 
       // Unwind the productDetails array to deal with each product separately
-      { $unwind: "$productDetails" },
+      {
+        $unwind: { path: "$productDetails", preserveNullAndEmptyArrays: true },
+      },
+
       // Project (select) only required fields
       {
         $project: {
           _id: 1,
           userId: 1,
-          "items.productId": "$productDetails._id",
-          "items.image": "$productDetails.image",
+          "items.productId": "$items.productId", // Corrected productId
+          "items.imageUrl": "$productDetails.imageUrl",
           "items.title": "$productDetails.title",
           "items.price": "$productDetails.price",
           "items.salePrice": "$productDetails.salePrice",
-          "items.quantity": "$productDetails.quantity",
+          "items.quantity": "$items.quantity", // Corrected quantity
         },
       },
+
       // Group back to reconstruct the cart with filtered items
       {
-        $grpup: {
+        $group: {
           _id: "$_id",
           userId: { $first: "$userId" },
           items: { $push: "$items" }, // Reconstruct the items array
         },
       },
     ]);
-    //If cart not found
+
+    // If cart not found
     if (!cartData.length) {
       logger.error("Cart not found!");
       return res.status(404).json({
@@ -140,14 +146,12 @@ const fetchCartItems = async (req, res) => {
         message: "Cart not found!",
       });
     }
-    // Return the cart with populte items
+
+    // Return the cart with populated items
     logger.info(`Fetched cart items successfully for user: ${userId}`);
     res.status(200).json({
       success: true,
-      data: {
-        ...cart._doc,
-        items: populateCartItems,
-      },
+      data: cartData[0], // Return the first (and only) grouped cart result
     });
   } catch (error) {
     logger.error("Error fetching cart items:", error);
@@ -157,13 +161,14 @@ const fetchCartItems = async (req, res) => {
     });
   }
 };
+
 // updates the quantity of a product in a user's cart.
 const updateCartItemQty = async (req, res) => {
   try {
-    const {  quantity } = req.body;
+    const { quantity } = req.body;
     const { productId } = req.params;
-    const  userId  = req.user.id;
-    
+    const userId = req.user.id;
+
     // Validate input
     if (
       !userId ||
@@ -205,61 +210,62 @@ const updateCartItemQty = async (req, res) => {
     cart.items[productIndex].quantity = quantity;
     // saved the updated cart
     await cart.save();
-    console.log("cart is: ", cart);
 
     // Use aggregation to fetch cart with product details
-    const userObjectId = new mongoose.Types.ObjectId(userId);
+    // const userObjectId = new mongoose.Types.ObjectId(userId);
 
-    const updatedCart = await Cart.aggregate([
-      // Convert userId string to ObjectId and match it
-      { $match: { userId: userObjectId } },
-      
-      // Deconstruct items array to handle each item separately
-      { $unwind: "$items" },
-      
-      // Join products collection to get product details
-      {
-        $lookup: {
-          from: "products",  // Make sure this is the correct collection name
-          localField: "items.productId",
-          foreignField: "_id",
-          as: "productDetails",
-        },
-      },
-    
-      // Unwind productDetails (allow empty values to avoid errors)
-      { $unwind: { path: "$productDetails", preserveNullAndEmptyArrays: true } },
-    
-      // Restructure the output
-      {
-        $project: {
-          _id: 1,
-          userId: 1,
-          "items.productId": 1,
-          "items.quantity": 1,
-          "items.productDetails": {
-            imageUrl: "$productDetails.imageUrl",
-            title: "$productDetails.title",
-            price: "$productDetails.price",
-            salePrice: "$productDetails.salePrice",
-          },
-        },
-      },
-    
-      // Re-group items back into an array under the userId
-      {
-        $group: {
-          _id: "$_id",
-          userId: { $first: "$userId" },
-          items: { $push: "$items" },
-        },
-      },
-    ]);
-    
-     // Fetch the updated cart with product details using populate()
-    //  const updatedCart = await Cart.findOne({ userId }).populate("items.productId", "imageUrl title price salePrice");
+    // const updatedCart = await Cart.aggregate([
+    //   // Convert userId string to ObjectId and match it
+    //   { $match: { userId: userObjectId } },
 
-    console.log(" updated cart is: ", updatedCart);
+    //   // Deconstruct items array to handle each item separately
+    //   { $unwind: "$items" },
+
+    //   // Join products collection to get product details
+    //   {
+    //     $lookup: {
+    //       from: "products",  // Make sure this is the correct collection name
+    //       localField: "items.productId",
+    //       foreignField: "_id",
+    //       as: "productDetails",
+    //     },
+    //   },
+
+    //   // Unwind productDetails (allow empty values to avoid errors)
+    //   { $unwind: { path: "$productDetails", preserveNullAndEmptyArrays: true } },
+
+    //   // Restructure the output
+    //   {
+    //     $project: {
+    //       _id: 1,
+    //       userId: 1,
+    //       "items.productId": 1,
+    //       "items.quantity": 1,
+    //       "items.productDetails": {
+    //         imageUrl: "$productDetails.imageUrl",
+    //         title: "$productDetails.title",
+    //         price: "$productDetails.price",
+    //         salePrice: "$productDetails.salePrice",
+    //       },
+    //     },
+    //   },
+
+    //   // Re-group items back into an array under the userId
+    //   {
+    //     $group: {
+    //       _id: "$_id",
+    //       userId: { $first: "$userId" },
+    //       items: { $push: "$items" },
+    //     },
+    //   },
+    // ]);
+
+    // Fetch the updated cart with product details using populate()
+    const updatedCart = await Cart.findOne({ userId }).populate(
+      "items.productId",
+      "imageUrl title price salePrice"
+    );
+
     // If cart not found after aggregation
     if (!updatedCart || updatedCart.length === 0) {
       logger.error("Cart not found");
@@ -286,7 +292,7 @@ const updateCartItemQty = async (req, res) => {
 
 const deleteCartItem = async (req, res) => {
   try {
-    const { userId, productId } = req.params;
+    const { productId } = req.params;
 
     //Validate input
     if (
@@ -321,7 +327,7 @@ const deleteCartItem = async (req, res) => {
 
     // Use aggregation to fetch cart with product details
     const cartWithDetails = await Cart.aggregate([
-      { $match: { _id: updatedCart._id } },
+      { $match: { _id: mongoose.Types.ObjectId(updatedCart._id) } },
       {
         $lookup: {
           from: "products", // Collection name for product model:mongoDb turn the collection to lowercase plular(eg.products)
