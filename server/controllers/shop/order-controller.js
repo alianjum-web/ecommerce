@@ -2,26 +2,16 @@ import {
   createPayPalPayment,
   getPayPalApprovalURL,
 } from "../../helpers/paypal.js";
-import {Order} from "../../models/Order.js";
-import {Cart} from "../../models/Cart.js";
-import {Product} from "../../models/Product.js";
+import { Order } from "../../models/Order.js";
+import { Cart } from "../../models/Cart.js";
+import { Product } from "../../models/Product.js";
 import { validationResult } from "express-validator";
 import logger from "../../utils/logger.js";
 import mongoose from "mongoose";
 
 const createOrder = async (req, res) => {
-  try {
-    //Validate request body
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      logger.warn("Validate errorrs:", errors.array());
-      return res.status(400).json({
-        success: false,
-        message: "Validation errors",
-        errors: errors.array(),
-      });
-    }
 
+  try {
     const {
       cartId,
       cartItems,
@@ -196,13 +186,13 @@ const getAllOrdersByUser = async (req, res) => {
       { $match: { userId: mongoose.Types.ObjectId(userId) } }, // Match orders by userId
       {
         $lookup: {
-          from: 'products', // Join with the products collection
-          let: { cartItems: '$cartItems' }, // Define variables for the pipeline
+          from: "products", // Join with the products collection
+          let: { cartItems: "$cartItems" }, // Define variables for the pipeline
           pipeline: [
             {
               $match: {
                 $expr: {
-                  $in: ['$_id', '$$cartItems.productId'], // Match products in cartItems
+                  $in: ["$_id", "$$cartItems.productId"], // Match products in cartItems
                 },
               },
             },
@@ -216,7 +206,7 @@ const getAllOrdersByUser = async (req, res) => {
               },
             },
           ],
-          as: 'productDetails', // Store the result in productDetails
+          as: "productDetails", // Store the result in productDetails
         },
       },
       {
@@ -226,18 +216,18 @@ const getAllOrdersByUser = async (req, res) => {
           cartId: 1,
           cartItems: {
             $map: {
-              input: '$cartItems',
-              as: 'item',
+              input: "$cartItems",
+              as: "item",
               in: {
-                productId: '$$item.productId',
-                quantity: '$$item.quantity',
+                productId: "$$item.productId",
+                quantity: "$$item.quantity",
                 productDetails: {
                   $arrayElemAt: [
                     {
                       $filter: {
-                        input: '$productDetails',
-                        as: 'product',
-                        cond: { $eq: ['$$product._id', '$$item.productId'] },
+                        input: "$productDetails",
+                        as: "product",
+                        cond: { $eq: ["$$product._id", "$$item.productId"] },
                       },
                     },
                     0,
@@ -282,62 +272,62 @@ const getAllOrdersByUser = async (req, res) => {
 const getOrderDetails = async (req, res) => {
   try {
     const { id } = req.params;
-// Validate for the id
-if (!id || !mongoose.Types.ObjectId.isValid(id)) {
-  return res.status(400).json({
-    success: false,
-    message: "Invalid order ID.",
-  });
-}
+    // Validate for the id
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid order ID.",
+      });
+    }
 
-const order = await Order.aggregate([
-  { $match: { _id: mongoose.Types.ObjectId(id) } }, //match order by id
-  { $unwind: "$cartItems" }, // Unwind the artItems array
-  {
-    $lookup: {
-      form: "produts", // Join with products collection
-      localFeild: "cartItems.productId",
-      foreignField: "_id",
-      as: "productDetails",
-    },
-  },
-  { $unwind: "$productDetails" },
-  {
-    $group: {
-      _id: "$_id",
-      userId: { $first: "$userId" },
-      cartId: { $first: "$cartId" },
-      addressInfo: { $first: "$addressInfo" },
-      orderStatus: { $first: "$orderStatus" },
-      paymentStatus: { $first: "$paymentStatus" },
-      totalAmount: { $first: "$totalAmount" },
-      paymentId: { $first: "$paymentId" },
-      payerId: { $first: "$payerId" },
-      createdAt: { $first: "$createdAt" },
-      updatedAt: { $first: "$updatedAt" },
-      cartItems: {
-        $push: {
-          productId: "$cartItems.productId",
-          quantity: "$cartItems.quantity",
-          productDetails: "$productDetails",
+    const order = await Order.aggregate([
+      { $match: { _id: mongoose.Types.ObjectId(id) } }, //match order by id
+      { $unwind: "$cartItems" }, // Unwind the artItems array
+      {
+        $lookup: {
+          form: "produts", // Join with products collection
+          localFeild: "cartItems.productId",
+          foreignField: "_id",
+          as: "productDetails",
         },
       },
-    },
-  },
-])
-  
-if (!order.length) {
-  return res.status(404).json({
-    success: false,
-    message: "Order not found.",
-  });
-}
+      { $unwind: "$productDetails" },
+      {
+        $group: {
+          _id: "$_id",
+          userId: { $first: "$userId" },
+          cartId: { $first: "$cartId" },
+          addressInfo: { $first: "$addressInfo" },
+          orderStatus: { $first: "$orderStatus" },
+          paymentStatus: { $first: "$paymentStatus" },
+          totalAmount: { $first: "$totalAmount" },
+          paymentId: { $first: "$paymentId" },
+          payerId: { $first: "$payerId" },
+          createdAt: { $first: "$createdAt" },
+          updatedAt: { $first: "$updatedAt" },
+          cartItems: {
+            $push: {
+              productId: "$cartItems.productId",
+              quantity: "$cartItems.quantity",
+              productDetails: "$productDetails",
+            },
+          },
+        },
+      },
+    ]);
 
-// Return success response
-res.status(200).json({
-  success: true,
-  data: order[0],
-});
+    if (!order.length) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found.",
+      });
+    }
+
+    // Return success response
+    res.status(200).json({
+      success: true,
+      data: order[0],
+    });
   } catch (e) {
     console.log(e);
     res.status(500).json({
