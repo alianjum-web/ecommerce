@@ -5,7 +5,6 @@ import {
 import { Order } from "../../models/Order.js";
 import { Cart } from "../../models/Cart.js";
 import { Product } from "../../models/Product.js";
-import { validationResult } from "express-validator";
 import logger from "../../utils/logger.js";
 import mongoose from "mongoose";
 
@@ -18,21 +17,24 @@ const createOrder = async (req, res) => {
       addressInfo,
       paymentMethod,
       totalAmount,
-      orderDate,
-      orderUpdateDate,
-      paymentId,
       payerId,
     } = req.body;
-    const userId = req.user.id;
-    // Prepare Paypal payment data
-    const paymentData = {
-      intent: "sale",
-      payer: {
+    const userId = req.user?.id;
+
+  
+    let paymentInfo = null;
+    let approvalURL = null;
+    if (paymentMethod === "paypal") {
+      
+      // Prepare Paypal payment data
+      const paymentData = {
+        intent: "sale",
+        payer: {
         payment_method: "paypal",
       },
       redirect_urls: {
-        return_url: "http://localhost:5173/shop/paypal-return",
-        cancel_url: "http://localhost:5173/shop/paypal-cancel",
+        return_url: process.env.PAYPAL_RETURN_URL,
+        cancel_url: process.env.PAYPAL_CANCEL_URL,
       },
       transaction: [
         {
@@ -55,10 +57,12 @@ const createOrder = async (req, res) => {
     };
 
     // Create paypal payment using service
-    const paymentInfo = await createPayPalPayment(paymentData);
+    paymentInfo = await createPayPalPayment(paymentData);
+    approvalURL = getPayPalApprovalURL(paymentInfo);
+  }
 
     // Create order in database
-    const newlyCreatedOrder = new Order({
+    const newlyCreatedOrder = await Order.create({
       userId,
       cartId,
       cartItems,
@@ -73,9 +77,7 @@ const createOrder = async (req, res) => {
       payerId,
     });
 
-    await newlyCreatedOrder.save();
     // Get PayPal approval URL
-    const approvalURL = getPayPalApprovalURL(paymentInfo);
     // Return success response
     logger.info(`Order created successfully: ${newlyCreatedOrder._id}`);
     res.status(201).json({
