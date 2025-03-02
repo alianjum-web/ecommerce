@@ -67,4 +67,19 @@ const OrderSchema = new Schema({
     }
   },
 },  { timestamps: true } );
+
+
+// ✅ **Add Indexing for Faster Queries**
+OrderSchema.index({ userId: 1, payerId: 1, orderDate: -1 });
+
 export const Order = mongoose.model("Order", OrderSchema);
+
+/*
+
+0 – 5,000 orders → Indexing is optional (small dataset, queries will still be fast).
+5,000 – 10,000 orders → Consider adding the index if queries start slowing down.
+10,000+ orders → Indexing is highly recommended to keep performance smooth.
+100,000+ orders → Indexing is a must, and you may also need sharding or caching.
+If your client’s business is expected to grow rapidly, it’s better to add the index early.
+
+ */
