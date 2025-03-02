@@ -23,7 +23,6 @@ const createOrder = async (req, res) => {
     }
 
     const {
-      userId,
       cartId,
       cartItems,
       addressInfo,
@@ -34,7 +33,7 @@ const createOrder = async (req, res) => {
       paymentId,
       payerId,
     } = req.body;
-
+    const userId = req.user.id;
     // Prepare Paypal payment data
     const paymentData = {
       intent: "sale",
