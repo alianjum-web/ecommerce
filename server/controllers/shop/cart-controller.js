@@ -49,8 +49,8 @@ const addToCart = async (req, res) => {
     );
     // findIndex:moves through items array: return 1 if found otherwise -1
     if (productInCartExists === -1) {
-      // Add new product to cart
-      cart.items.push({ productId, quantity });
+      // Add  product with fresh quantity
+      cart.items.push({ productId, quantity: 1 }); // reset to 1
       logger.info(`Product added to cart: ${productId}`);
     } else {
       // Update quantity of existing product
@@ -308,14 +308,16 @@ const deleteCartItem = async (req, res) => {
       });
     }
 
+    //By converting the productId to an ObjectId, the $pull operation can correctly match and remove the item from the items array.
+    const productObjId = new mongoose.Types.ObjectId(productId);
 
     // Remove product from cart
     const updatedCart = await Cart.findOneAndUpdate(
+      // If u use updateOneAndDelete and in end new true than it store the document in the array that you pulled out => so, not deleted
       { userId },
-      { $pull: { items: { productId: new mongoose.Types.ObjectId(productId) } } },
+      { $pull: { items: { productId: productObjId } } },
       { new: true } // Return the modified cart
     );
-
 
     // If cart not found
     if (!updatedCart) {
@@ -331,23 +333,27 @@ const deleteCartItem = async (req, res) => {
       return res.status(200).json({
         success: true,
         message: "Cart was empty and has been deleted.",
-        data: null,
+        data: null, // Explicitly return null for the cart
       });
     }
 
-
-    // Fetch cart with product details using aggregation
+    // Fetch the updated cart with product details (only if the cart was not deleted)
     const cartWithDetails = await Cart.aggregate([
       { $match: { _id: updatedCart._id } },
       {
         $lookup: {
-          from: "products", 
+          from: "products",
           localField: "items.productId",
           foreignField: "_id",
           as: "productDetails",
         },
       },
-      { $unwind: "$items" }, // Unwind the items array
+      {
+        $unwind: {
+          path: "$items",
+          preserveNullAndEmptyArrays: true, // Prevents errors if items array is empty
+        },
+      },
       {
         $lookup: {
           from: "products",
@@ -380,9 +386,8 @@ const deleteCartItem = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      data: cartWithDetails[0] || updatedCart, // Fallback to updatedCart if aggregation fails
+      data: cartWithDetails.length > 0 ? cartWithDetails[0] : updatedCart,
     });
-
   } catch (error) {
     console.error("Error deleting cart item:", error);
     res.status(500).json({
@@ -391,7 +396,6 @@ const deleteCartItem = async (req, res) => {
     });
   }
 };
-
 
 export { addToCart, updateCartItemQty, deleteCartItem, fetchCartItems };
 
