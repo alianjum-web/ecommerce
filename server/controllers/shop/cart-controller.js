@@ -293,106 +293,105 @@ const updateCartItemQty = async (req, res) => {
 const deleteCartItem = async (req, res) => {
   try {
     const { productId } = req.params;
-    console.log("productId is: ", productId);
     const userId = req.user.id;
-    console.log(`Data of authenticated user is ${userId}`);
-    //Validate input
+
+    // Validate input
     if (
       !userId ||
       !productId ||
       !mongoose.Types.ObjectId.isValid(userId) ||
       !mongoose.Types.ObjectId.isValid(productId)
     ) {
-      logger.warn("Invalid input");
       return res.status(400).json({
         success: false,
-        message:
-          "Invalid input data. Please provide valid userId and productId.",
+        message: "Invalid userId or productId.",
       });
     }
-console.log("Going to work on updatedCart")
+
+
     // Remove product from cart
     const updatedCart = await Cart.findOneAndUpdate(
       { userId },
-      { $pull: { items: productId  } }, // remove the product with productId
-      { new: true } // return modified document
+      { $pull: { items: { productId: new mongoose.Types.ObjectId(productId) } } },
+      { new: true } // Return the modified cart
     );
-console.log("updatedCart is: ", updatedCart)
+
+
     // If cart not found
     if (!updatedCart) {
-      logger.warn("Cart not found");
       return res.status(404).json({
         success: false,
-        message: "Cart not found",
+        message: "Cart not found.",
       });
-    };
-console.log("checking updatedcart")
-    // If cart is empty after decleration remove the entire cart
-    // if (updatedCart.items.length === 0) {
-    //   await Cart.deleteOne({ _id: updatedCart._id });
-    //   logger.info(`Cart deleted successfully for user ${userId}`);
-    //   return res.status(200).json({
-    //     success: true, 
-    //     message: "Cart was and ahs been deleted",
-    //     data: null
-    //   });
-    // }
-console.log(`Going to work on the cartWithDetails: ${cartWithDetails}`)
-    // Use aggregation to fetch cart with product details
+    }
+
+    // If cart is empty after removal, delete the entire cart
+    if (updatedCart.items.length === 0) {
+      await Cart.deleteOne({ _id: updatedCart._id });
+      return res.status(200).json({
+        success: true,
+        message: "Cart was empty and has been deleted.",
+        data: null,
+      });
+    }
+
+
+    // Fetch cart with product details using aggregation
     const cartWithDetails = await Cart.aggregate([
-      { $match: { _id: mongoose.Types.ObjectId(updatedCart._id) } },
+      { $match: { _id: updatedCart._id } },
       {
         $lookup: {
-          from: "products", // Collection name for product model:mongoDb turn the collection to lowercase plular(eg.products)
+          from: "products", 
           localField: "items.productId",
           foreignField: "_id",
           as: "productDetails",
         },
       },
-      { $unwind: "$productDetails" },
+      { $unwind: "$items" }, // Unwind the items array
+      {
+        $lookup: {
+          from: "products",
+          localField: "items.productId",
+          foreignField: "_id",
+          as: "items.productDetails",
+        },
+      },
+      { $unwind: "$items.productDetails" },
       {
         $project: {
           _id: 1,
           userId: 1,
           "items.productId": 1,
           "items.quantity": 1,
-          "items.productDetails": {
-            imageUrl: "$productDetails.imageUrl",
-            title: "$productDetails.title",
-            price: "$productDetails.price",
-            salePrice: "$productDetails.salePrice",
-          },
+          "items.productDetails.imageUrl": 1,
+          "items.productDetails.title": 1,
+          "items.productDetails.price": 1,
+          "items.productDetails.salePrice": 1,
         },
       },
       {
         $group: {
-          _id: "$id",
-          userId: { $first: "$userId" }, // first ensures only one userId is taken per cart (since it's the same for all items).
-          //  push collects all items of the cart into an array so that each cart has its products grouped together.
-          items: {
-            $push: {
-              productId: "$items.productId",
-              quantity: "$items.quantity",
-              productDetails: "$items.productDetails",
-            },
-          },
+          _id: "$_id",
+          userId: { $first: "$userId" },
+          items: { $push: "$items" },
         },
       },
     ]);
 
-    // Return teh updated cart
     res.status(200).json({
       success: true,
-      data: cartWithDetails[0] || updatedCart, // In case the lookup fails, return updatedCart
+      data: cartWithDetails[0] || updatedCart, // Fallback to updatedCart if aggregation fails
     });
+
   } catch (error) {
-    logger.error("Error deleting cart item:", error);
+    console.error("Error deleting cart item:", error);
     res.status(500).json({
       success: false,
       message: "Internal server error",
     });
   }
 };
+
 
 export { addToCart, updateCartItemQty, deleteCartItem, fetchCartItems };
 
