@@ -59,7 +59,7 @@ const createOrder = async (req, res) => {
     // Create paypal payment using service
     paymentInfo = await createPayPalPayment(paymentData);
     approvalURL = getPayPalApprovalURL(paymentInfo);
-  }
+  };
 
     // Create order in database
     const newlyCreatedOrder = await Order.create({
@@ -71,9 +71,9 @@ const createOrder = async (req, res) => {
       paymentMethod,
       paymentStatus: "pending",
       totalAmount,
-      orderDate,
-      orderUpdateDate,
-      paymentId: paymentInfo.id,
+      // orderDate,
+      // orderUpdateDate,
+      paymentId: paymentStatus === "paid" ? paymentInfo?.id : null, // Only include if payment is successful
       payerId,
     });
 
