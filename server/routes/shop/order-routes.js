@@ -13,7 +13,7 @@ import {
 
 const router = express.Router();
 
-router.post("/create/:userId", authMiddleware, validateOrder, handleValidationErrors, createOrder);
+router.post("/create", authMiddleware, validateOrder, handleValidationErrors, createOrder);
 router.post("/capture", authMiddleware, capturePayment);
 router.get("/list/:userId", authMiddleware, getAllOrdersByUser);
 router.get("/details/:id", authMiddleware, getOrderDetails);
