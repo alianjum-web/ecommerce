@@ -2,7 +2,6 @@ import { body } from "express-validator";
 
 // ✅ Order Validation Rules
 export const validateOrder = [
-  body("userId").isMongoId().withMessage("Invalid user ID"),
   body("payerId").isMongoId().withMessage("Invalid payer ID"),
   body("cartItems").isArray({ min: 1 }).withMessage("Cart cannot be empty"),
   body("cartItems.*.productId").isMongoId().withMessage("Invalid product ID"),

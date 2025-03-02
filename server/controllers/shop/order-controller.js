@@ -9,98 +9,79 @@ import logger from "../../utils/logger.js";
 import mongoose from "mongoose";
 
 const createOrder = async (req, res) => {
-
   try {
-    const {
-      cartItems,
-      addressInfo,
-      paymentMethod,
-      totalAmount,
-      payerId,
-    } = req.body;
+    const { cartItems, addressInfo, paymentMethod, totalAmount, payerId } = req.body;
     const userId = req.user?.id;
 
-  
     let paymentInfo = null;
     let approvalURL = null;
     let paymentStatus = "pending";
 
+
     if (paymentMethod === "paypal") {
-      
-      // Prepare Paypal payment data
+      // Prepare PayPal payment data
       const paymentData = {
         intent: "sale",
-        payer: {
-        payment_method: "paypal",
-      },
-      redirect_urls: {
-        return_url: process.env.PAYPAL_RETURN_URL,
-        cancel_url: process.env.PAYPAL_CANCEL_URL,
-      },
-      transaction: [
-        {
-          item_list: {
-            items: cartItems.map((item) => ({
-              name: item.title,
-              sku: item.productId,
-              price: item.price.toFixed(2),
-              currency: "USD",
-              quantity: item.quantity,
-            })),
-          },
-          amount: {
-            currency: "USD",
-            total: totalAmount.toFixed(2),
-          },
-          description: "Payment for order",
+        payer: { payment_method: "paypal" },
+        redirect_urls: {
+          return_url: process.env.PAYPAL_RETURN_URL,
+          cancel_url: process.env.PAYPAL_CANCEL_URL,
         },
-      ],
-    };
+        transactions: [
+          {
+            item_list: {
+              items: cartItems.map((item) => ({
+                name: item.title,
+                sku: item.productId,
+                price: item.price.toFixed(2),
+                currency: "USD",
+                quantity: item.quantity,
+              })),
+            },
+            amount: { currency: "USD", total: totalAmount.toFixed(2) },
+            description: "Payment for order",
+          },
+        ],
+      };
 
-    // Create paypal payment using service
-    paymentInfo = await createPayPalPayment(paymentData);
-    approvalURL = getPayPalApprovalURL(paymentInfo);
-  } else {
-    // For direct payment (COD, Credit card, Bank Transfer)
-    paymentStatus = "paid";
-  };
+      // Create PayPal payment
+      paymentInfo = await createPayPalPayment(paymentData);
+      approvalURL = getPayPalApprovalURL(paymentInfo);
+    } else {
+      // For direct payment (COD, Credit Card, Bank Transfer)
+      paymentStatus = "paid";
+    }
 
-    // Create order in database
+
+    // Create order in the database
     const newlyCreatedOrder = await Order.create({
       userId,
-      payerId: payerId || userId,// If payer is different (father), use provided payerId
+      payerId: payerId || userId, // If payer is different (father), use provided payerId
       cartItems,
       addressInfo,
       orderStatus: "pending",
       paymentMethod,
       paymentStatus,
       totalAmount,
-      // orderDate,
-      // orderUpdateDate,
       paymentId: paymentStatus === "paid" ? paymentInfo?.id : null, // Only include if payment is successful
     });
 
-    // Get PayPal approval URL
-    // Return success response
     logger.info(`Order created successfully: ${newlyCreatedOrder._id}`);
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
-      approvalURL,// Only present if payment is via PayPal
+      approvalURL, // Only present if payment is via PayPal
       orderId: newlyCreatedOrder._id,
     });
 
-    res.status(200).json({
-      success: true,
-      approvalURL,
-    });
   } catch (error) {
     logger.error("Error creating order:", error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
-      message: "Internal Server Error",
+      message: "Internal Server Error in creating Order",
     });
   }
 };
+
 
 const capturePayment = async (req, res) => {
   try {

@@ -30,13 +30,17 @@ export const createPayPalPayment = async (paymentData) => {
   return new Promise((resolve, reject) => {
     paypal.payment.create(paymentData, (error, payment) => {
       if (error) {
-        logger.error('PayPal payment creation failed:', error);
-        reject(new Error('Failed to create paypal payment'));
+        logger.error('PayPal payment creation failed:', error.message);
+        if (error.response) {
+          console.error("PayPal Error Response:", JSON.stringify(error.response, null, 2));
+        }
+        
+        reject(new Error(`Failed to create PayPal payment: ${error.response?.message || error.message}`));
       } else {
-        logger.info("Paypal payment created successfully:", payment.id);
+        logger.info("PayPal payment created successfully:", payment.id);
         resolve(payment);
       }
-    })
+    });    
   });
 }
 
