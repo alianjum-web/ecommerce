@@ -12,7 +12,6 @@ const createOrder = async (req, res) => {
 
   try {
     const {
-      cartId,
       cartItems,
       addressInfo,
       paymentMethod,
@@ -24,6 +23,8 @@ const createOrder = async (req, res) => {
   
     let paymentInfo = null;
     let approvalURL = null;
+    let paymentStatus = "pending";
+
     if (paymentMethod === "paypal") {
       
       // Prepare Paypal payment data
@@ -59,22 +60,24 @@ const createOrder = async (req, res) => {
     // Create paypal payment using service
     paymentInfo = await createPayPalPayment(paymentData);
     approvalURL = getPayPalApprovalURL(paymentInfo);
+  } else {
+    // For direct payment (COD, Credit card, Bank Transfer)
+    paymentStatus = "paid";
   };
 
     // Create order in database
     const newlyCreatedOrder = await Order.create({
       userId,
-      cartId,
+      payerId: payerId || userId,// If payer is different (father), use provided payerId
       cartItems,
       addressInfo,
       orderStatus: "pending",
       paymentMethod,
-      paymentStatus: "pending",
+      paymentStatus,
       totalAmount,
       // orderDate,
       // orderUpdateDate,
       paymentId: paymentStatus === "paid" ? paymentInfo?.id : null, // Only include if payment is successful
-      payerId,
     });
 
     // Get PayPal approval URL
@@ -82,7 +85,7 @@ const createOrder = async (req, res) => {
     logger.info(`Order created successfully: ${newlyCreatedOrder._id}`);
     res.status(201).json({
       success: true,
-      approvalURL,
+      approvalURL,// Only present if payment is via PayPal
       orderId: newlyCreatedOrder._id,
     });
 
