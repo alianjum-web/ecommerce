@@ -289,7 +289,7 @@ const getAllOrdersByUser = async (req, res) => {
 const getOrderDetails = async (req, res) => {
   try {
     const { id } = req.params;
-    // Validate for the id
+    // Validate order ID
     if (!id || !mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
         success: false,
@@ -298,19 +298,21 @@ const getOrderDetails = async (req, res) => {
     }
 
     const order = await Order.aggregate([
-      { $match: { _id: new mongoose.Types.ObjectId(id) } }, //match order by id
-      { $unwind: "$cartItems" }, // Unwind the artItems array
+      { $match: { _id: new mongoose.Types.ObjectId(id) } }, // Match order by ID
       {
         $lookup: {
-          form: "products", // Join with products collection
-          localFeild: "cartItems.productId",
+          from: "products", 
+          localField: "cartItems.productId", 
           foreignField: "_id",
           as: "productDetails",
         },
       },
-      { $unwind: "$productDetails",
-        preserveNullAnd
-       },
+      {
+        $unwind: {
+          path: "$cartItems",
+          preserveNullAndEmptyArrays: true, // Prevent errors if empty
+        },
+      },
       {
         $group: {
           _id: "$_id",
@@ -328,7 +330,18 @@ const getOrderDetails = async (req, res) => {
             $push: {
               productId: "$cartItems.productId",
               quantity: "$cartItems.quantity",
-              productDetails: "$productDetails",
+              productDetails: {
+                $arrayElemAt: [
+                  {
+                    $filter: {
+                      input: "$productDetails",
+                      as: "product",
+                      cond: { $eq: ["$$product._id", "$cartItems.productId"] },
+                    },
+                  },
+                  0,
+                ],
+              },
             },
           },
         },
@@ -342,16 +355,15 @@ const getOrderDetails = async (req, res) => {
       });
     }
 
-    // Return success response
     res.status(200).json({
       success: true,
       data: order[0],
     });
-  } catch (e) {
-    console.log(e);
+  } catch (error) {
+    console.error("Error fetching order details:", error);
     res.status(500).json({
       success: false,
-      message: "Some error occured when fething details of order!",
+      message: "An error occurred while fetching order details.",
     });
   }
 };
