@@ -10,13 +10,13 @@ import mongoose from "mongoose";
 
 const createOrder = async (req, res) => {
   try {
-    const { cartItems, addressInfo, paymentMethod, totalAmount, payerId } = req.body;
+    const { cartItems, addressInfo, paymentMethod, totalAmount, payerId } =
+      req.body;
     const userId = req.user?.id;
 
-    let paymentInfo = null;
     let approvalURL = null;
     let paymentStatus = "pending";
-
+    let paymentId = null;
 
     if (paymentMethod === "paypal") {
       // Prepare PayPal payment data
@@ -45,13 +45,13 @@ const createOrder = async (req, res) => {
       };
 
       // Create PayPal payment
-      paymentInfo = await createPayPalPayment(paymentData);
+      const paymentInfo = await createPayPalPayment(paymentData);
       approvalURL = getPayPalApprovalURL(paymentInfo);
+      paymentId = paymentInfo.id; // Store the PayPal paymentId
     } else {
       // For direct payment (COD, Credit Card, Bank Transfer)
       paymentStatus = "paid";
     }
-
 
     // Create order in the database
     const newlyCreatedOrder = await Order.create({
@@ -63,7 +63,7 @@ const createOrder = async (req, res) => {
       paymentMethod,
       paymentStatus,
       totalAmount, // Set paymentId for PayPal, even if pending
-      paymentId: paymentInfo?.id || null, // orderStatus == "paid" ? paymentInfo?.id : null,Only include if payment is successful
+      paymentId,// Store paymentId (null for non-PayPal payments)
     });
 
     logger.info(`Order created successfully: ${newlyCreatedOrder._id}`);
@@ -72,7 +72,6 @@ const createOrder = async (req, res) => {
       approvalURL, // Only present if payment is via PayPal
       orderId: newlyCreatedOrder._id,
     });
-
   } catch (error) {
     logger.error("Error creating order:", error);
     return res.status(500).json({
@@ -82,18 +81,17 @@ const createOrder = async (req, res) => {
   }
 };
 
-
 const capturePayment = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
     const { paymentId, payerId, orderId } = req.body;
     // Validate input
-    if (!paymentId || !payerId || !orderId) {
+    if (!orderId) {
       logger.error("invalid inout data");
       return res.status(400).json({
         success: false,
-        message: "payementId, payerId, and orderId are required.",
+        message: "Order ID is required.",
       });
     }
 
@@ -105,22 +103,34 @@ const capturePayment = async (req, res) => {
         success: false,
         message: "Order not found",
       });
-    };
+    }
 
     // Check if the payment is already captured
     if (order.paymentStatus === "paid") {
       logger.error("Payment already captured");
       return res.status(400).json({
-        success:  false,
+        success: false,
         message: "Payment already captured",
-      })
-    }
+      });
+    };
 
-    //Update order details and payment details
+    // Handle PayPal payments
+    if (order.paymentMethod === "paypal") {
+      if (!paymentId || !payerId) {
+        logger.error("Payment ID and Payer ID are required for PayPal payments");
+        return res.status(400).json({
+          success: false,
+          message: "Payment ID and Payer ID are required for PayPal payments.",
+        });  
+      }
+      
+      //Update order details for PayPal payments
+      order.paymentId = paymentId;
+      order.payerId = payerId;
+    }
+    // Update order status and payment status
     order.paymentStatus = "paid";
     order.orderStatus = "confirmed";
-    order.paymentId = paymentId;
-    order.payerId = payerId;
 
     //Uppdate product stock
     for (const item of order.cartItems) {
