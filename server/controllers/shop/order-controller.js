@@ -197,7 +197,7 @@ const getAllOrdersByUser = async (req, res) => {
     }
 
     const userObjId = new mongoose.Types.ObjectId(userId);
-    
+
     // Fetch orders using aggregation
     const orders = await Order.aggregate([
       { $match: {userId: userObjId} }, // Match orders by userId
@@ -298,17 +298,19 @@ const getOrderDetails = async (req, res) => {
     }
 
     const order = await Order.aggregate([
-      { $match: { _id: mongoose.Types.ObjectId(id) } }, //match order by id
+      { $match: { _id: new mongoose.Types.ObjectId(id) } }, //match order by id
       { $unwind: "$cartItems" }, // Unwind the artItems array
       {
         $lookup: {
-          form: "produts", // Join with products collection
+          form: "products", // Join with products collection
           localFeild: "cartItems.productId",
           foreignField: "_id",
           as: "productDetails",
         },
       },
-      { $unwind: "$productDetails" },
+      { $unwind: "$productDetails",
+        preserveNullAnd
+       },
       {
         $group: {
           _id: "$_id",
@@ -349,7 +351,7 @@ const getOrderDetails = async (req, res) => {
     console.log(e);
     res.status(500).json({
       success: false,
-      message: "Some error occured!",
+      message: "Some error occured when fething details of order!",
     });
   }
 };
