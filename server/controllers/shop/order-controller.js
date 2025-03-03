@@ -63,7 +63,7 @@ const createOrder = async (req, res) => {
       paymentMethod,
       paymentStatus,
       totalAmount, // Set paymentId for PayPal, even if pending
-      paymentId,// Store paymentId (null for non-PayPal payments)
+      paymentId, // Store paymentId (null for non-PayPal payments)
     });
 
     logger.info(`Order created successfully: ${newlyCreatedOrder._id}`);
@@ -112,18 +112,20 @@ const capturePayment = async (req, res) => {
         success: false,
         message: "Payment already captured",
       });
-    };
+    }
 
     // Handle PayPal payments
     if (order.paymentMethod === "paypal") {
       if (!paymentId || !payerId) {
-        logger.error("Payment ID and Payer ID are required for PayPal payments");
+        logger.error(
+          "Payment ID and Payer ID are required for PayPal payments"
+        );
         return res.status(400).json({
           success: false,
           message: "Payment ID and Payer ID are required for PayPal payments.",
-        });  
+        });
       }
-      
+
       //Update order details for PayPal payments
       order.paymentId = paymentId;
       order.payerId = payerId;
@@ -185,7 +187,7 @@ const capturePayment = async (req, res) => {
 
 const getAllOrdersByUser = async (req, res) => {
   try {
-    const { userId } = req.params;
+    const userId = req.user.id;
     // Validate input
     if (!userId) {
       return res.status(400).json({
@@ -193,10 +195,12 @@ const getAllOrdersByUser = async (req, res) => {
         message: "userId is required.",
       });
     }
-
+    console.log("userId is : ", userId);
+    const userObjId = new mongoose.Types.ObjectId(userId);
+    console.log("userObjId is : ", userObjId);
     // Fetch orders using aggregation
     const orders = await Order.aggregate([
-      { $match: { userId: mongoose.Types.ObjectId(userId) } }, // Match orders by userId
+      { $match: userObjId }, // Match orders by userId
       {
         $lookup: {
           from: "products", // Join with the products collection
@@ -260,7 +264,7 @@ const getAllOrdersByUser = async (req, res) => {
         },
       },
     ]);
-
+    console.log("Orders for he user is: ", orders);
     if (!orders.length) {
       return res.status(404).json({
         success: false,
@@ -277,7 +281,7 @@ const getAllOrdersByUser = async (req, res) => {
     logger.error("error fetching orders", error);
     return res.status(500).json({
       success: false,
-      message: "An error occurred while capturing the payment.",
+      message: "An error occurred while fetching order a user",
     });
   }
 };
