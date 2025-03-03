@@ -195,12 +195,12 @@ const getAllOrdersByUser = async (req, res) => {
         message: "userId is required.",
       });
     }
-    console.log("userId is : ", userId);
+
     const userObjId = new mongoose.Types.ObjectId(userId);
-    console.log("userObjId is : ", userObjId);
+    
     // Fetch orders using aggregation
     const orders = await Order.aggregate([
-      { $match: userObjId }, // Match orders by userId
+      { $match: {userId: userObjId} }, // Match orders by userId
       {
         $lookup: {
           from: "products", // Join with the products collection
@@ -264,7 +264,7 @@ const getAllOrdersByUser = async (req, res) => {
         },
       },
     ]);
-    console.log("Orders for he user is: ", orders);
+
     if (!orders.length) {
       return res.status(404).json({
         success: false,
