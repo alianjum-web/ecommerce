@@ -7,7 +7,6 @@ import { Cart } from "../../models/Cart.js";
 import { Product } from "../../models/Product.js";
 import logger from "../../utils/logger.js";
 import mongoose from "mongoose";
-import { LogOut } from 'lucide-react';
 
 const createOrder = async (req, res) => {
   try {
