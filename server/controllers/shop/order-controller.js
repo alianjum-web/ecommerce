@@ -62,8 +62,8 @@ const createOrder = async (req, res) => {
       orderStatus: "pending",
       paymentMethod,
       paymentStatus,
-      totalAmount,
-      paymentId: paymentStatus === "paid" ? paymentInfo?.id : null, // Only include if payment is successful
+      totalAmount, // Set paymentId for PayPal, even if pending
+      paymentId: paymentInfo?.id || null, // orderStatus == "paid" ? paymentInfo?.id : null,Only include if payment is successful
     });
 
     logger.info(`Order created successfully: ${newlyCreatedOrder._id}`);
@@ -84,6 +84,7 @@ const createOrder = async (req, res) => {
 
 
 const capturePayment = async (req, res) => {
+  
   try {
     const { paymentId, payerId, orderId } = req.body;
     // Validate input
