@@ -7,6 +7,7 @@ import { Cart } from "../../models/Cart.js";
 import { Product } from "../../models/Product.js";
 import logger from "../../utils/logger.js";
 import mongoose from "mongoose";
+import { LogOut } from 'lucide-react';
 
 const createOrder = async (req, res) => {
   try {
@@ -84,7 +85,8 @@ const createOrder = async (req, res) => {
 
 
 const capturePayment = async (req, res) => {
-  
+  const session = await mongoose.startSession();
+  session.startTransaction();
   try {
     const { paymentId, payerId, orderId } = req.body;
     // Validate input
@@ -97,13 +99,22 @@ const capturePayment = async (req, res) => {
     }
 
     // Find the order
-    const order = await Order.findById(orderId);
+    const order = await Order.findById(orderId).session(session);
     if (!order) {
       logger.warn("Ordernot found");
       return res.status(404).json({
         success: false,
         message: "Order not found",
       });
+    };
+
+    // Check if the payment is already captured
+    if (order.paymentStatus === "paid") {
+      logger.error("Payment already captured");
+      return res.status(400).json({
+        success:  false,
+        message: "Payment already captured",
+      })
     }
 
     //Update order details and payment details
@@ -114,7 +125,7 @@ const capturePayment = async (req, res) => {
 
     //Uppdate product stock
     for (const item of order.cartItems) {
-      const product = await Product.findById(item.productId);
+      const product = await Product.findById(item.productId).session(session);
       if (!product) {
         logger.error("Product not found");
         return res.status(404).json({
@@ -133,22 +144,28 @@ const capturePayment = async (req, res) => {
 
       // Product stock
       product.totalStock -= item.quantity;
-      await product.save();
+      await product.save({ session });
     }
 
     // Deelete the cart
-    await Cart.findByIdAndDelete(order.cartId);
+    await Cart.findByIdAndDelete(order.cartId).session(session);
 
     // save the updated order
-    await order.save();
+    await order.save({ session });
 
-    logger.warn("Order confirmed successfully");
+    // Commit the transaction
+    await session.commitTransaction();
+    session.endSession();
+
+    logger.info("Order confirmed successfully");
     return res.status(200).json({
       success: true,
       message: "Order confirmed successfully",
       data: order,
     });
   } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
     logger.error(`Error capturing payment ${error}`);
     res.status(500).json({
       success: false,
