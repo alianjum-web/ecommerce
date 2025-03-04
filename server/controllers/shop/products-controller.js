@@ -12,7 +12,7 @@ const getFilteredProducts = async (req, res) => {
       page = 1,
       limit = 10,
     } = req.query;
-
+// const { page, limit } = req.query;  get it from frontend and paresint() to convert string->num as query return string
     let filters = {};
 
     if (category) {
@@ -45,10 +45,10 @@ const getFilteredProducts = async (req, res) => {
         break;
     }
 
-    // Pagination logic
-    const pageNumber = parseInt(page, 10) || 1;
-    const pageSize = parseInt(limit, 10) || 10;
-    const skip = (pageNumber - 1) * pageSize;
+    // Pagination logic  if page = 3 , llimit = 10
+    const pageNumber = parseInt(page, 10) || 1; // 3
+    const pageSize = parseInt(limit, 10) || 10; // 10
+    const skip = (pageNumber - 1) * pageSize; // (3 -1) * 10 = 20, skip them
 
     // Fetch optimized query with case-insensitive sorting
     const products = await Product.find(filters)
@@ -118,3 +118,10 @@ const getProductDetails = async (req, res) => {
 };
 
 export { getFilteredProducts, getProductDetails };
+
+/*
+parseInt(string, radix);
+The first argument (string) → The value we want to convert (e.g., "3", "10", etc.).
+The second argument (radix) → The base in which to parse the number (usually 10 for decimal numbers).
+
+*/
