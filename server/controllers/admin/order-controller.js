@@ -67,7 +67,6 @@ const updateOrderStatus = async (req, res) => {
   try {
     const { id } = req.params;
     const { orderStatus } = req.body;
-
     // Validate orderStatus
     if (!orderStatus) {
       logger.warn("Order status is required");
@@ -85,7 +84,6 @@ const updateOrderStatus = async (req, res) => {
         message: "Order not found",
       });
     }
-
     // Update order status
     order.orderStatus = orderStatus;
     await order.save();
@@ -97,7 +95,7 @@ const updateOrderStatus = async (req, res) => {
       data: order,
     });
   } catch (error) {
-    logger.error(`Error updating order status for ID: ${id}`, error);
+    logger.error(`Error updating order status `, error);
     res.status(500).json({
       success: false,
       message: "Failed to update order status. Please try again later.",
