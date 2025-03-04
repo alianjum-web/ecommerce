@@ -1,15 +1,16 @@
+import mongoose from "mongoose";
 import {Order} from "../../models/Order.js";
 import {Product} from "../../models/Product.js";
 import {ProductReview} from "../../models/Review.js";
 import logger from "../../utils/logger.js";
-import mongoose from "mongoose";
 
 const addProductReview = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction(); // startSession, startTransaction): Ensures all operations succeed together or fail together.
   try {
-    const { productId, userId, userName, reviewMessage, reviewValue } =
+    const { userName, productId, reviewMessage, reviewValue } =
       req.body;
+      const userId = req.user.id;
     // Validate input
     if (
       !mongoose.Types.ObjectId.isValid(productId) ||
