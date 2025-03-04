@@ -8,9 +8,12 @@ const addProductReview = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction(); // startSession, startTransaction): Ensures all operations succeed together or fail together.
   try {
-    const { userName, productId, reviewMessage, reviewValue } =
+    const {  reviewMessage, reviewValue } =
       req.body;
+      const { productId } = req.params
       const userId = req.user.id;
+      const userName = req.user.name;
+      console.log(req.user);
     // Validate input
     if (
       !mongoose.Types.ObjectId.isValid(productId) ||
@@ -85,7 +88,7 @@ const addProductReview = async (req, res) => {
     logger.error("Error adding product review:", error);
     res.status(500).json({
       success: false,
-      message: "Internal server error",
+      message: "Internal server error while adding review",
     });
   }
 };

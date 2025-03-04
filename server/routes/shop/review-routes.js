@@ -2,7 +2,7 @@ import express from 'express';
 
 import { authMiddleware } from '../../controllers/auth/auth-controller.js';
 import { validateReview } from '../../Middleware/validateReview.js';
-import { handleValidationErrors } from '../../Middleware/handleValidationError';
+import { handleValidationErrors } from '../../Middleware/handleValidationError.js';
 import{
   addProductReview,
   getProductReviews,
