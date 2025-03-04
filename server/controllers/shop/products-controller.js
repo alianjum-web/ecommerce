@@ -80,7 +80,7 @@ const getFilteredProducts = async (req, res) => {
     logger.error("Error fetching fitered products");
     res.status(500).json({
       success: false,
-      message: "Internal sever error",
+      message: "Internal sever error when fetching filtered products",
     });
   }
 };
