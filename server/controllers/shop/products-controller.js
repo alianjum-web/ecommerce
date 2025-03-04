@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import {Product} from "../../models/Product.js";
+import logger from "../../utils/logger.js";
 
 // get filterd products based on category, brand and sorting order
 const getFilteredProducts = async (req, res) => {
@@ -28,10 +29,10 @@ const getFilteredProducts = async (req, res) => {
     sort.price = -1; // by price descending order  
     break;
     case "title-atoz": 
-    sort.price = 1; // by price descending order  
+    sort.title = 1; // by price descending order  
     break;
     case "title-ztoa": 
-    sort.price = -1; // by price descending order  
+    sort.title = -1; // by price descending order  
     break;
     default: 
     sort.price = 1; // Default to sorting by price in ascending order

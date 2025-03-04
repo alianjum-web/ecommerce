@@ -317,7 +317,7 @@ const getOrderDetails = async (req, res) => {
         $group: {
           _id: "$_id",
           userId: { $first: "$userId" },
-          cartId: { $first: "$cartId" },
+          // cartId: { $first: "$cartId" },
           addressInfo: { $first: "$addressInfo" },
           orderStatus: { $first: "$orderStatus" },
           paymentStatus: { $first: "$paymentStatus" },
