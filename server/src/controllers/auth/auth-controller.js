@@ -3,10 +3,17 @@ import jwt from "jsonwebtoken";
 import { User } from "../../models/User.js";
 import logger from "../../utils/logger.js";
 
-//register
 
+// Constants for JWT and cookies
+const COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production", // Use secure cookies in production
+  sameSite: "strict", // Prevent CSRF attacks
+};
+
+//register
 const registerUser = async (req, res) => {
-  const { email, password, userName, fullName } = req.body;
+  const { email, password, userName, fullName, role } = req.body;
 
   //validate request body
   if (!email || !password || !userName || !fullName) {
@@ -16,7 +23,12 @@ const registerUser = async (req, res) => {
       message: "All fields (email, password, userName, fullName) are required"
     });
   }
-
+if (!["buyer", "seller"].includes(role)) {
+  return res.status(400).json({
+    succes: false,
+    message: "Invalid role selected."
+  })
+}
   try {
     const checkUser = await User.findOne({ email });
     if (checkUser) {
@@ -48,13 +60,6 @@ const registerUser = async (req, res) => {
   }
 };
 
-// Constants for JWT and cookies
-const JWT_SECRET = process.env.JWT_SECRET || "default_secret_key"; // Use environment variable for JWT secret
-const COOKIE_OPTIONS = {
-  httpOnly: true,
-  secure: process.env.NODE_ENV === "production", // Use secure cookies in production
-  sameSite: "strict", // Prevent CSRF attacks
-};
 
 // Login User
 const loginUser = async (req, res) => {
@@ -91,16 +96,7 @@ const loginUser = async (req, res) => {
     }
 
     // Generate JWT token
-    const token = jwt.sign(
-      {
-        id: user._id,
-        role: user.role,
-        email: user.email,
-        userName: user.userName,
-      },
-      JWT_SECRET,
-      { expiresIn: "1h" } // Token expires in 1 hour
-    );
+    const token = user.generateAccessToken();
 
     // Set cookie and send response
     res.cookie("token", token, COOKIE_OPTIONS).status(200).json({
@@ -145,7 +141,7 @@ const logoutUser = (req, res) => {
 // Auth Middleware
 const authMiddleware = async (req, res, next) => {
   const token = req.cookies.token;
-
+  console.log("Received token:", req.cookies.token);
   if (!token) {
     logger.warn("Auth middleware: No token provided");
     return res.status(401).json({
@@ -155,7 +151,8 @@ const authMiddleware = async (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = jwt.verify(token, ACCESS_TOKEN_SECRET);
+    console.log("Decoded JWT:", decoded);
     req.user = decoded;  // Attach user info to `req`
     next();
   } catch (error) {
