@@ -141,7 +141,7 @@ const logoutUser = (req, res) => {
 // Auth Middleware
 const authMiddleware = async (req, res, next) => {
   const token = req.cookies.token;
-  console.log("Received token:", req.cookies.token);
+  
   if (!token) {
     logger.warn("Auth middleware: No token provided");
     return res.status(401).json({
@@ -151,8 +151,8 @@ const authMiddleware = async (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, ACCESS_TOKEN_SECRET);
-    console.log("Decoded JWT:", decoded);
+    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+
     req.user = decoded;  // Attach user info to `req`
     next();
   } catch (error) {

@@ -101,6 +101,7 @@ const addProduct = async (req, res) => {
 
 const fetchAllProducts = async (req, res) => {
   try {
+    console.log("Starting fetcing products")
     const listOfAllPriducts = await Product.find({});
 
     if (!listOfAllPriducts) {
