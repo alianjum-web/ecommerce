@@ -1,5 +1,7 @@
 import express from "express";
 
+import { authMiddleware } from "../../controllers/auth/auth-controller.js";
+import { authorizeRoles } from "../../Middleware/auth.js";
 import {
   getAllOrders,
   getOrderDetails,
@@ -8,8 +10,8 @@ import {
 
 const router = express.Router();
 
-router.get("/get", getAllOrders);
-router.get("/details/:id", getOrderDetails);
-router.put("/update/:id", updateOrderStatus);
+router.get("/get", authMiddleware, authorizeRoles, getAllOrders);
+router.get("/details/:id", authMiddleware, authorizeRoles, getOrderDetails);
+router.put("/update/:id", authMiddleware, authorizeRoles, updateOrderStatus);
 
 export default router;
