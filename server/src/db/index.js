@@ -1,9 +1,6 @@
 import { mongoose } from "mongoose";
 
 const options = {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-    poolSize: 10, // Number of connections in the pool
   serverSelectionTimeoutMS: 5000, // Timeout for server selection
   socketTimeoutMS: 45000, // Timeout for socket operations
   connectTimeoutMS: 30000, // Timeout for initial connection
@@ -13,7 +10,7 @@ const mongoURI = process.env.MONGODB_URI;
 
 const connectDB = async () => {
   try {
-    await mongoose.connect(mongoURI, options);
+    await mongoose.connect(mongoURI,options);
     console.log("MongoDB connected");
 
     // Event listeners for connection status
