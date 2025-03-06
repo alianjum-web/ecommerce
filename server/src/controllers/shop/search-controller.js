@@ -24,7 +24,7 @@ const searchProducts = async (req, res) => {
     page = Math.max(1, parseInt(page)); // Ensure page is at least 1
     limit = Math.min(50, Math.max(1, parseInt(limit))); // Limit between 1-50..  Math.min(50, ...) → Limits the maximum number of results to 50
 
-    // Trim and escape special characters
+    // Trim and escape special characters and spaces
     const sanitizedKeyword = escapeRegex(keyword.trim());
 
     // Ensure keyword is not too long
@@ -53,21 +53,22 @@ const searchProducts = async (req, res) => {
     } else {
       // **Development/Small Projects: Use Regex Search**
       searchQuery = {
-        $or: [
-          { title: { $regex: sanitizedKeyword, $options: "i" } },
+        $or: [  // match any condition in the array
+          { title: { $regex: sanitizedKeyword, $options: "i" } },  // cCase-insensitive (with "i" flag
           { description: { $regex: sanitizedKeyword, $options: "i" } },
           { category: { $regex: sanitizedKeyword, $options: "i" } },
           { brand: { $regex: sanitizedKeyword, $options: "i" } },
         ],
       };
 
+      // page =1 ; skip ((1-1) * 10) ; show 1st page limit= 10 products only
       searchResults = await Product.find(searchQuery)
-        .skip((page - 1) * limit)
+        .skip((page - 1) * limit) 
         .limit(limit);
     }
 
     // Count total results for pagination
-    const totalResults = await Product.countDocuments(searchQuery);
+    const totalResults = await Product.countDocuments(searchQuery);  // in development: countDoc go to db and count docs on the basis of condition in teh searchQuery
     const totalPages = Math.ceil(totalResults / limit);
 
     // Log the search event
