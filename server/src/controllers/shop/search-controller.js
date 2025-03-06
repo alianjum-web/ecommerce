@@ -1,40 +1,96 @@
-import {Product} from "../../models/Product.js";
+import { Product } from "../../models/Product.js";
 import logger from "../../utils/logger.js";
+
+
+// Utility function to escape special regex characters
+const escapeRegex = (string) => {
+  return string.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
+};
+
+
+// Utility function to escape special regex characters
+const escapeRegex = (string) => {
+  return string.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
+};
 
 const searchProducts = async (req, res) => {
   try {
     const { keyword } = req.params;
-    // validate keyword
-    if (!keyword || typeof keyword != "string" || keyword.trim() === "") {
-      return res.status(404).json({
+    let { page = 1, limit = 10 } = req.query;
+
+    // Validate keyword
+    if (!keyword || typeof keyword !== "string" || keyword.trim() === "") {
+      return res.status(400).json({
         success: false,
-        message: "Keyword is required and must not be an empty string",
+        message: "Keyword is required and must be a non-empty string",
       });
     }
 
-    // sentize the keyword
-    const sanitizedKeyword = keyword.replace(/[^\w\s]/gi, ""); // remove special character by space
+    // Convert page and limit to numbers
+    page = Math.max(1, parseInt(page)); // Ensure page is at least 1
+    limit = Math.min(50, Math.max(1, parseInt(limit))); // Limit between 1-50
 
-    const regEx = new RegExp(sanitizedKeyword);
+    // Trim and escape special characters
+    const sanitizedKeyword = escapeRegex(keyword.trim());
 
-    //build search query
-    const searchQuery = {
-      $or: [
-        { title: regEx },
-        { description: regEx },
-        { category: regEx },
-        { brand: regEx },
-      ],
-    };
+    // Ensure keyword is not too long
+    if (sanitizedKeyword.length > 100) {
+      return res.status(400).json({
+        success: false,
+        message: "Keyword is too long. Please use a shorter search term.",
+      });
+    }
 
-    const searchResults = await Product.find(searchQuery);
-    //  return success repsonse
+    let searchQuery = {};
+    let searchResults = [];
+
+    // Check if the environment is production
+    const isProduction = process.env.NODE_ENV === "production";
+
+    if (isProduction) {
+      // **Production: Use Full-Text Search**
+      searchQuery = { $text: { $search: sanitizedKeyword } };
+
+      // Search and return paginated results with relevance score
+      searchResults = await Product.find(searchQuery, { score: { $meta: "textScore" } })
+        .sort({ score: { $meta: "textScore" } }) // Sort by relevance
+        .skip((page - 1) * limit) // Pagination
+        .limit(limit);
+    } else {
+      // **Development/Small Projects: Use Regex Search**
+      searchQuery = {
+        $or: [
+          { title: { $regex: sanitizedKeyword, $options: "i" } },
+          { description: { $regex: sanitizedKeyword, $options: "i" } },
+          { category: { $regex: sanitizedKeyword, $options: "i" } },
+          { brand: { $regex: sanitizedKeyword, $options: "i" } },
+        ],
+      };
+
+      searchResults = await Product.find(searchQuery)
+        .skip((page - 1) * limit)
+        .limit(limit);
+    }
+
+    // Count total results for pagination
+    const totalResults = await Product.countDocuments(searchQuery);
+    const totalPages = Math.ceil(totalResults / limit);
+
+    // Log the search event
     logger.info(
-      `Found ${searchResults.length} products for keyword: ${sanitizedKeyword}`
+      `Found ${searchResults.length} products for keyword: "${sanitizedKeyword}" (Page: ${page})`
     );
+
+    // Return paginated response
     res.status(200).json({
       success: true,
       data: searchResults,
+      pagination: {
+        totalResults,
+        totalPages,
+        currentPage: page,
+        pageSize: limit,
+      },
     });
   } catch (error) {
     logger.error(`Error searching products:`, error);
