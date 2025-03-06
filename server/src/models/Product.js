@@ -1,5 +1,5 @@
 import mongoose, { Schema } from "mongoose";
-import logger from "../utils/logger.js";
+import  logger from "../utils/logger.js";
 // Product Schema
 const ProductSchema = new Schema(
   {
@@ -36,13 +36,13 @@ const Product = mongoose.model("Product", ProductSchema);
 const ensureIndexes = async () => {
   try {
     await Product.syncIndexes(); // Ensures all indexes exist
-    console.log("✅ MongoDB Indexes Created Successfully!");
+    console.log(" MongoDB Indexes Created Successfully!");
   } catch (error) {
-    console.error("❌ Error Creating MongoDB Indexes:", error);
+    console.error(" Error Creating MongoDB Indexes:", error);
   }
 };
 
 // Call the function to create indexes when the server starts
 ensureIndexes();
 
-export { Product };
+export { Product }; 
