@@ -20,9 +20,9 @@ const searchProducts = async (req, res) => {
       });
     }
 
-    // Convert page and limit to numbers
+    // Convert page and limit to numbers; parseInt; convert string to int
     page = Math.max(1, parseInt(page)); // Ensure page is at least 1
-    limit = Math.min(50, Math.max(1, parseInt(limit))); // Limit between 1-50
+    limit = Math.min(50, Math.max(1, parseInt(limit))); // Limit between 1-50..  Math.min(50, ...) → Limits the maximum number of results to 50
 
     // Trim and escape special characters
     const sanitizedKeyword = escapeRegex(keyword.trim());
@@ -42,11 +42,11 @@ const searchProducts = async (req, res) => {
     const isProduction = process.env.NODE_ENV === "production";
 
     if (isProduction) {
-      // **Production: Use Full-Text Search**
+      // MongoDB full-text search operator that searches for keyword
       searchQuery = { $text: { $search: sanitizedKeyword } };
 
       // Search and return paginated results with relevance score
-      searchResults = await Product.find(searchQuery, { score: { $meta: "textScore" } })
+      searchResults = await Product.find(searchQuery, { score: { $meta: "textScore" } }) // return score based on relevence by Mongo Full text 
         .sort({ score: { $meta: "textScore" } }) // Sort by relevance
         .skip((page - 1) * limit) // Pagination
         .limit(limit);
