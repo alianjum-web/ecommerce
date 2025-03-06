@@ -37,7 +37,7 @@ const registerUser = async (req, res) => {
         message: "User already exists with this email",
       });
     }
-// hash password by teh logic in the User model('pre' => hash before save)
+// hash password by the logic in the User model('pre' => hash before save), I am hashing at 2 places which causes an error here
 
     // Create user
     const newUser = await User.create({
@@ -57,7 +57,6 @@ const registerUser = async (req, res) => {
         id: newUser._id,
         userName: newUser.userName,
         email: newUser.email,
-        password: newUser.password,
         role: newUser.role,
       },
     });
@@ -84,7 +83,6 @@ const loginUser = async (req, res) => {
       message: "Email and password are required",
     });
   }
-  console.log("User is: ", req.body);
 
   try {
     // Check if user exists
@@ -99,13 +97,8 @@ const loginUser = async (req, res) => {
         message: "User not found. Please register first.",
       });
     }
-    console.log("Type of entered password:", typeof password);
-    console.log("Entered password:", password);
-    console.log("Stored hashed password:", user.password);
         // Check if password matches
     const isPasswordValid = await bcrypt.compare(password, user.password);
-console.log("Password Comparison Result:", isPasswordValid);
-
     if (!isPasswordValid) {
       logger.warn(`Login failed: Incorrect password for user ${email}`);
       return res.status(401).json({
