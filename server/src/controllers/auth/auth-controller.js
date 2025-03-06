@@ -14,7 +14,8 @@ const COOKIE_OPTIONS = {
 //register
 const registerUser = async (req, res) => {
   const { email, password, userName, fullName, role } = req.body;
-  //validate request body
+
+  // Validate request body
   if (!email || !password || !userName || !fullName) {
     logger.warn("User registration failed: Missing required fields");
     return res.status(400).json({
@@ -23,14 +24,8 @@ const registerUser = async (req, res) => {
     });
   }
 
-  // Validate role
-  const roleValue = role || "buyer";  // Default to "buyer" if undefined
-  if (!["buyer", "seller"].includes(roleValue)) {
-    return res.status(400).json({
-      success: false,
-      message: "Invalid role selected.",
-    });
-  }
+  // Validate role (default to "buyer")
+  const roleValue = ["buyer", "seller"].includes(role) ? role : "buyer";
 
   try {
     // Check if user already exists
@@ -42,33 +37,39 @@ const registerUser = async (req, res) => {
         message: "User already exists with this email",
       });
     }
+// hash password by teh logic in the User model('pre' => hash before save)
 
-    // Hash password
-    const hashPassword = await bcrypt.hash(password, 10);
-
-    // Create new user
+    // Create user
     const newUser = await User.create({
       userName,
       fullName,
       email,
-      password: hashPassword,
-      role, // Use the validated role
+      password, // Store the hashed password
+      role: roleValue, // Use validated role
     });
 
-    // await newUser.save();
-    res.status(200).json({
+    console.log("Stored Hashed Password:", newUser.password);
+
+    res.status(201).json({
       success: true,
-      message: "Registered successful",
-      newUser,
+      message: "Registered successfully",
+      user: {
+        id: newUser._id,
+        userName: newUser.userName,
+        email: newUser.email,
+        password: newUser.password,
+        role: newUser.role,
+      },
     });
   } catch (error) {
-    logger.error("User registeration failed", error);
+    logger.error("User registration failed", error);
     res.status(500).json({
       success: false,
-      message: "Some error occured during registration ",
+      message: "Some error occurred during registration",
     });
   }
 };
+
 
 
 // Login User
@@ -88,6 +89,9 @@ const loginUser = async (req, res) => {
   try {
     // Check if user exists
     const user = await User.findOne({ email });
+//     const user1 = await User.findOne({ email: "schoridinger@example.com" });
+// console.log("Stored Password in DB:", user1.password);
+
     if (!user) {
       logger.warn(`Login failed: User not found with email ${email}`);
       return res.status(404).json({
@@ -95,9 +99,13 @@ const loginUser = async (req, res) => {
         message: "User not found. Please register first.",
       });
     }
-console.log("User is: ", user);
-    // Check if password matches
+    console.log("Type of entered password:", typeof password);
+    console.log("Entered password:", password);
+    console.log("Stored hashed password:", user.password);
+        // Check if password matches
     const isPasswordValid = await bcrypt.compare(password, user.password);
+console.log("Password Comparison Result:", isPasswordValid);
+
     if (!isPasswordValid) {
       logger.warn(`Login failed: Incorrect password for user ${email}`);
       return res.status(401).json({
