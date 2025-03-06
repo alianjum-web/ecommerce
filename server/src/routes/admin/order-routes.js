@@ -10,8 +10,8 @@ import {
 
 const router = express.Router();
 
-router.get("/get", authMiddleware, authorizeRoles("seller"), getAllOrders);
-router.get("/details/:id", authMiddleware, authorizeRoles("seller"), getOrderDetails);
-router.put("/update/:id", authMiddleware, authorizeRoles("seller"), updateOrderStatus);
+router.get("/get", authMiddleware, authorizeRoles("seller", "admin"), getAllOrders);
+router.get("/details/:id", authMiddleware, authorizeRoles("seller", "admin"), getOrderDetails);
+router.put("/update/:id", authMiddleware, authorizeRoles("seller", "admin"), updateOrderStatus);
 
 export default router;

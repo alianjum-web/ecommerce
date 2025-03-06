@@ -14,10 +14,10 @@ import { upload } from "../../helpers/cloudinary.js";
 
 const router = express.Router();
 
-router.post("/upload-image", authMiddleware, authorizeRoles("seller"), upload.single("image"), handleImageUpload);
-router.post("/add", authMiddleware, authorizeRoles("seller"), addProduct);
-router.put("/edit/:id", authMiddleware, authorizeRoles("seller"), editProduct);
-router.delete("/delete/:id", authMiddleware, authorizeRoles("seller"), deleteProduct);
-router.get("/get", authMiddleware, authorizeRoles("seller"), fetchAllProducts);
+router.post("/upload-image", authMiddleware, authorizeRoles("seller", "admin"), upload.single("image"), handleImageUpload);
+router.post("/add", authMiddleware, authorizeRoles("seller", "admin"), addProduct);
+router.put("/edit/:id", authMiddleware, authorizeRoles("seller", "admin"), editProduct);
+router.delete("/delete/:id", authMiddleware, authorizeRoles("seller", "admin"), deleteProduct);
+router.get("/get", authMiddleware, authorizeRoles("seller", "admin"), fetchAllProducts);
 
 export default router;
