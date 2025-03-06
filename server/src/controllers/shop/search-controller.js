@@ -7,12 +7,6 @@ const escapeRegex = (string) => {
   return string.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
 };
 
-
-// Utility function to escape special regex characters
-const escapeRegex = (string) => {
-  return string.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
-};
-
 const searchProducts = async (req, res) => {
   try {
     const { keyword } = req.params;
