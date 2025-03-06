@@ -14,48 +14,58 @@ const COOKIE_OPTIONS = {
 //register
 const registerUser = async (req, res) => {
   const { email, password, userName, fullName, role } = req.body;
-
   //validate request body
   if (!email || !password || !userName || !fullName) {
-    logger.warn("User registeration failed: Missing required fields");
+    logger.warn("User registration failed: Missing required fields");
     return res.status(400).json({
-      succes: false,
-      message: "All fields (email, password, userName, fullName) are required"
+      success: false,
+      message: "All fields (email, password, userName, fullName) are required",
     });
   }
-if (!["buyer", "seller"].includes(role)) {
-  return res.status(400).json({
-    succes: false,
-    message: "Invalid role selected."
-  })
-}
+
+  // Validate role
+  const roleValue = role || "buyer";  // Default to "buyer" if undefined
+  if (!["buyer", "seller"].includes(roleValue)) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid role selected.",
+    });
+  }
+
   try {
+    // Check if user already exists
     const checkUser = await User.findOne({ email });
     if (checkUser) {
-      logger.warn(`User registeration failed: User already exists with email ${email}`);
+      logger.warn(`User registration failed: User already exists with email ${email}`);
       return res.status(409).json({
         success: false,
-        message: "User already exist with this email",
+        message: "User already exists with this email",
       });
     }
+
+    // Hash password
     const hashPassword = await bcrypt.hash(password, 10);
-    const newUser = new User({
+
+    // Create new user
+    const newUser = await User.create({
       userName,
       fullName,
       email,
       password: hashPassword,
+      role, // Use the validated role
     });
 
-    await newUser.save();
+    // await newUser.save();
     res.status(200).json({
       success: true,
       message: "Registered successful",
+      newUser,
     });
   } catch (error) {
     logger.error("User registeration failed", error);
     res.status(500).json({
       success: false,
-      message: "Some error occured",
+      message: "Some error occured during registration ",
     });
   }
 };
@@ -73,6 +83,7 @@ const loginUser = async (req, res) => {
       message: "Email and password are required",
     });
   }
+  console.log("User is: ", req.body);
 
   try {
     // Check if user exists
@@ -84,7 +95,7 @@ const loginUser = async (req, res) => {
         message: "User not found. Please register first.",
       });
     }
-
+console.log("User is: ", user);
     // Check if password matches
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {

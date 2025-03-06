@@ -1,6 +1,5 @@
 import express from 'express';
 
-import { authorizeRoles } from '../../Middleware/auth.js';
 import {
   registerUser,
   loginUser,

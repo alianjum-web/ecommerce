@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 const options = {
-  serverSelectionTimeoutMS: 5000,  // Timeout for selecting a server
+  // serverSelectionTimeoutMS: 10000,  // Timeout for selecting a server
   socketTimeoutMS: 45000,          // Timeout for socket operations
   connectTimeoutMS: 30000,         // Timeout for initial connection
 };
