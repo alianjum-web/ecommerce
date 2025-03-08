@@ -1,9 +1,12 @@
+'use client' 
+
+
 import React from 'react'
 import { useSelector, useDispatch } from 'react-redux'
 import { decrement, increment } from './counterSlice'
-import styles from './Counter.module.css'
+// import styles from './Counter.module.css'
 
-export function Counter() {
+export default function Counter() {
   const count = useSelector((state) => state.counter.value)
   const dispatch = useDispatch()
 
