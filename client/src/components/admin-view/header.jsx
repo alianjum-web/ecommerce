@@ -2,6 +2,7 @@ import { AlignJustify, LogOut } from "lucide-react";
 import { Button } from "../ui/button";
 import { useDispatch } from "react-redux";
 import { logoutUser } from "@/store/auth-slice";
+import PropTypes from 'prop-types';
 
 function AdminHeader({ setOpen }) {
   const dispatch = useDispatch();
@@ -28,5 +29,9 @@ function AdminHeader({ setOpen }) {
     </header>
   );
 }
+AdminHeader.propTypes = {
+  setOpen: PropTypes.func.isRequired,
+};
+
 
 export default AdminHeader;

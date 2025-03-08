@@ -2,6 +2,7 @@ import { FileIcon, UploadCloudIcon, XIcon } from "lucide-react";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { useEffect, useRef } from "react";
+import PropTypes from "prop-types";
 import { Button } from "../ui/button";
 import axios from "axios";
 import { Skeleton } from "../ui/skeleton";
@@ -118,5 +119,15 @@ function ProductImageUpload({
     </div>
   );
 }
+ProductImageUpload.propTypes = {
+  imageFile: PropTypes.object,
+  setImageFile: PropTypes.func.isRequired,
+  imageLoadingState: PropTypes.bool.isRequired,
+  uploadedImageUrl: PropTypes.string,
+  setUploadedImageUrl: PropTypes.func.isRequired,
+  setImageLoadingState: PropTypes.func.isRequired,
+  isEditMode: PropTypes.bool.isRequired,
+  isCustomStyling: PropTypes.bool,
+};
 
 export default ProductImageUpload;
