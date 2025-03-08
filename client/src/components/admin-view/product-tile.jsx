@@ -1,6 +1,6 @@
+import PropTypes from 'prop-types';
 import { Button } from "../ui/button";
 import { Card, CardContent, CardFooter } from "../ui/card";
-
 
 function AdminProductTile({
   product,
@@ -51,6 +51,12 @@ function AdminProductTile({
   );
 }
 
-
+AdminProductTile.propTypes = {
+  product: PropTypes.object.isRequired,
+  setFormData: PropTypes.func.isRequired,
+  setOpenCreateProductsDialog: PropTypes.func.isRequired,
+  setCurrentEditedId: PropTypes.func.isRequired,
+  handleDelete: PropTypes.func.isRequired,
+};
 
 export default AdminProductTile;
