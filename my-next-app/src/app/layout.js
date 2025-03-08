@@ -2,7 +2,7 @@
 
 import { Provider } from "react-redux";
 import { store } from "./store.js"; // Import the Redux store
-
+import "./globals.css";
 export default function RootLayout({ children }) {
   return (
     <html lang="en">

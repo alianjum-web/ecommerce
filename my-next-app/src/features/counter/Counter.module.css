@@ -1,6 +1,7 @@
-p{
-    height: 18px;
+
+
+.btn {
+    color: white;
+    background-color: blue;
 }
-h1 {
-    height: 27px;
-}
+
