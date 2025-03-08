@@ -12,8 +12,8 @@ function ProductImageUpload({
   setImageFile,
   imageLoadingState,
   uploadedImageUrl,
-  setUploadedImageUrl,
   setImageLoadingState,
+  setUploadedImageUrl,
   isEditMode,
   isCustomStyling = false,
 }) {
@@ -46,25 +46,25 @@ function ProductImageUpload({
     }
   }
 
-  async function uploadImageToCloudinary() {
-    setImageLoadingState(true);
-    const data = new FormData();
-    data.append("my_file", imageFile);
-    const response = await axios.post(
-      "http://localhost:5000/api/admin/products/upload-image",
-      data
-    );
-    console.log(response, "response");
-
-    if (response?.data?.success) {
-      setUploadedImageUrl(response.data.result.url);
-      setImageLoadingState(false);
-    }
-  }
-
   useEffect(() => {
+    async function uploadImageToCloudinary() {
+      setImageLoadingState(true);
+      const data = new FormData();
+      data.append("my_file", imageFile);
+      const response = await axios.post(
+        "http://localhost:5000/api/admin/products/upload-image",
+        data
+      );
+      console.log(response, "response");
+
+      if (response?.data?.success) {
+        setUploadedImageUrl(response.data.result.url);
+        setImageLoadingState(false);
+      }
+    }
+
     if (imageFile !== null) uploadImageToCloudinary();
-  }, [imageFile]);
+  }, [imageFile, setImageLoadingState, setUploadedImageUrl]);
 
   return (
     <div
@@ -116,6 +116,11 @@ function ProductImageUpload({
           </div>
         )}
       </div>
+      {uploadedImageUrl && (
+        <div className="mt-4">
+          <img src={uploadedImageUrl} alt="Uploaded" className="w-full h-auto" />
+        </div>
+      )}
     </div>
   );
 }
@@ -124,8 +129,8 @@ ProductImageUpload.propTypes = {
   setImageFile: PropTypes.func.isRequired,
   imageLoadingState: PropTypes.bool.isRequired,
   uploadedImageUrl: PropTypes.string,
-  setUploadedImageUrl: PropTypes.func.isRequired,
   setImageLoadingState: PropTypes.func.isRequired,
+  setUploadedImageUrl: PropTypes.func.isRequired,
   isEditMode: PropTypes.bool.isRequired,
   isCustomStyling: PropTypes.bool,
 };
