@@ -1,6 +1,7 @@
 import { Button } from "../ui/button";
 import { Card, CardContent, CardFooter } from "../ui/card";
 import { Label } from "../ui/label";
+import PropTypes from 'prop-types';
 
 function AddressCard({
   addressInfo,
@@ -36,5 +37,22 @@ function AddressCard({
     </Card>
   );
 }
+
+AddressCard.propTypes = {
+  addressInfo: PropTypes.shape({
+    address: PropTypes.string,
+    city: PropTypes.string,
+    pincode: PropTypes.string,
+    phone: PropTypes.string,
+    notes: PropTypes.string,
+    _id: PropTypes.string,
+  }).isRequired,
+  handleDeleteAddress: PropTypes.func.isRequired,
+  handleEditAddress: PropTypes.func.isRequired,
+  setCurrentSelectedAddress: PropTypes.func,
+  selectedId: PropTypes.shape({
+    _id: PropTypes.string,
+  }),
+};
 
 export default AddressCard;
