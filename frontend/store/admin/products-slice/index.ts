@@ -1,23 +1,10 @@
 import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
 import axios from "axios";
+import { Product } from "@/utils/productInterface";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
-interface Product {
-  _id: string; // MongoDB ObjectId as a string
-  imageUrl: string;
-  imagePublicId: string;
-  title: string;
-  description: string;
-  category: string;
-  brand: string;
-  price: number;
-  salePrice?: number; // Optional because it's not always provided
-  totalStock: number;
-  averageReview: number;
-  createdAt: string;
-  updatedAt: string;
-}
+
 
 interface AdminProductsState {
   isLoading: boolean;
