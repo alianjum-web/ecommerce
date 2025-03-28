@@ -1,16 +1,20 @@
 import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
 import axios from "axios";
-import { error } from "console";
-import { stat } from "fs";
-import { act } from "react";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
 interface User {
-    id: String;
-    name: string;
+    _id: string; // MongoDB ObjectId as a string
+    userName: string;
+    fullName: string;
     email: string;
-}
+    password: string;
+    role: "buyer" | "seller" | "admin"; // Only these three roles are allowed
+    createdAt: string;
+    updatedAt: string;
+  }
+  
+
 interface AuthState {
     isAuthenticated: boolean;
     isLoading: boolean;

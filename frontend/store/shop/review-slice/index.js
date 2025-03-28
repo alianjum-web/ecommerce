@@ -5,7 +5,17 @@ const initialState = {
     isLoading: false,
     reviews: [],
 };
-
+interface ProductReview {
+    _id: string;
+    productId: string; // ID of the reviewed product
+    userId: string; // ID of the user who wrote the review
+    userName?: string; // (Optional) Username of the reviewer
+    reviewMessage?: string; // Review text
+    reviewValue: number; // Star rating (1-5)
+    createdAt: string;
+    updatedAt: string;
+  }
+  
 export const addReview = createAsyncThunk(
     "/order/addReview",
     async (formData) => {

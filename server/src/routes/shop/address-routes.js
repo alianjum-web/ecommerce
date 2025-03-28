@@ -10,7 +10,7 @@ import {
 
 const router = express.Router();
 
-router.post("/add", authMiddleware, addAddress);
+router.post("/add/:userId", authMiddleware, addAddress);
 router.get("/get/:userId", fetchAllAddress);
 router.delete("/delete/:userId/:addressId", deleteAddress);
 router.put("/update/:userId/:addressId", editAddress);

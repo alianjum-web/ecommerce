@@ -1,9 +1,40 @@
 import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
 import axios from "axios";
-import { error } from "console";
-import { act } from "react";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+
+
+export interface Order {
+  _id: string;
+  userId: string;
+  payerId: string;
+  cartItems: CartItem[];
+  addressInfo: AddressInfo;
+  orderStatus: "pending" | "confirmed" | "shipped" | "delivered" | "cancelled";
+  paymentMethod: "credit_card" | "paypal" | "bank_transfer" | "cash_on_delivery";
+  paymentStatus: "pending" | "paid" | "failed";
+  totalAmount: number;
+  paymentId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CartItem {
+  productId: string;
+  title: string;
+  image: string;
+  price: number;
+  quantity: number;
+}
+
+export interface AddressInfo {
+  addressId?: string;
+  address: string;
+  city: string;
+  pincode: string;
+  phone: string;
+  notes?: string;
+}
 
 // Define tyoes for APi response
 interface Order {
