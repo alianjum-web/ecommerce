@@ -14,6 +14,7 @@ import shopSearchSlice from "./shop/search-slice";
 import shopReviewSlice from "./shop/review-slice";
 import commonFeatureSlice from "./common-slice";
 
+import formReducer from "./slices/formSlices"
 
 const rootReducer = combineReducers({
     auth: authReducer,
@@ -29,6 +30,8 @@ const rootReducer = combineReducers({
     shopReview: shopReviewSlice,
 
     commonFeature: commonFeatureSlice,
+
+    form: formReducer,
   
 });
 

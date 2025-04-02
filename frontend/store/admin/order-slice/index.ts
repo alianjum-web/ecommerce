@@ -3,22 +3,6 @@ import axios from "axios";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
-
-export interface Order {
-  _id: string;
-  userId: string;
-  payerId: string;
-  cartItems: CartItem[];
-  addressInfo: AddressInfo;
-  orderStatus: "pending" | "confirmed" | "shipped" | "delivered" | "cancelled";
-  paymentMethod: "credit_card" | "paypal" | "bank_transfer" | "cash_on_delivery";
-  paymentStatus: "pending" | "paid" | "failed";
-  totalAmount: number;
-  paymentId?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
 export interface CartItem {
   productId: string;
   title: string;
@@ -36,14 +20,21 @@ export interface AddressInfo {
   notes?: string;
 }
 
-// Define tyoes for APi response
-interface Order {
-  id: string;
-  customerName: string;
-  items: string[];
+export interface Order {
+  _id: string;
+  userId: string;
+  payerId: string;
+  cartItems: CartItem[];
+  addressInfo: AddressInfo;
+  orderStatus: "pending" | "confirmed" | "shipped" | "delivered" | "cancelled";
+  paymentMethod: "credit_card" | "paypal" | "bank_transfer" | "cash_on_delivery";
+  paymentStatus: "pending" | "paid" | "failed";
   totalAmount: number;
-  status: string;
+  paymentId?: string;
+  createdAt: string;
+  updatedAt: string;
 }
+
 
 interface AdminOrderState {
   orderList: Order[];
@@ -72,7 +63,7 @@ export const getAllOrdersForAdmin = createAsyncThunk<Order[], void, { rejectValu
   "/order/getAllOrdersForAdmin",
   async (_, { rejectWithValue }) => {
     return fetchData(async () => {
-      const response = await axios.get<{ data: Order[] }>(`${BASE_URL}/api/admin//api/admin/orders/get`);
+      const response = await axios.get<{ data: Order[] }>(`${BASE_URL}/api/admin/api/admin/orders/get`);
       return response.data.data;
     }).catch((error) => rejectWithValue(error))
   }
@@ -149,7 +140,7 @@ const adminOrderSlice = createSlice({
       .addCase(updateOrderStatus.fulfilled, (state, action: PayloadAction<Order>) => {
         state.isLoading = false;
         state.orderList = state.orderList.map((order) =>
-          order.id === action.payload.id ? action.payload : order
+          order._id === action.payload._id ? action.payload : order
         );
       })
       .addCase(updateOrderStatus.rejected, (state, action) => {

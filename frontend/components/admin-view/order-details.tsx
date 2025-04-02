@@ -7,7 +7,9 @@ import { DialogContent } from "../ui/dialog";
 import { Label } from "../ui/label";
 import { Separator } from "../ui/separator";
 import { Badge } from "../ui/badge";
-import { useToast } from "../ui/use-toast";
+import { toast } from "sonner"; // ✅ Replacing old `useToast` import
+
+import { AppDispatch, RootState } from "@/store/store";
 import {
   getAllOrdersForAdmin,
   getOrderDetailsForAdmin,
@@ -37,6 +39,7 @@ interface OrderDetails {
   orderStatus: string;
   cartItems: CartItem[];
   addressInfo: AddressInfo;
+  createdAt: string;
 }
 
 interface AdminOrderDetailsViewProps {
@@ -47,27 +50,27 @@ const initialFormData = { status: "" };
 
 const AdminOrderDetailsView: React.FC<AdminOrderDetailsViewProps> = ({ orderDetails }) => {
   const [formData, setFormData] = useState(initialFormData);
-  const dispatch = useDispatch();
-  const { user } = useSelector((state: any) => state.auth);
-  const { toast } = useToast();
+  const dispatch = useDispatch<AppDispatch>();
+  const { user } = useSelector((state: RootState) => state.auth);
 
   const handleUpdateStatus = async (event: React.FormEvent) => {
     event.preventDefault();
     const { status } = formData;
-    
+
     try {
       const response = await dispatch(
         updateOrderStatus({ id: orderDetails._id, orderStatus: status })
       ).unwrap();
 
-      if (response?.success) {
+      if (response) {
         dispatch(getOrderDetailsForAdmin(orderDetails._id));
         dispatch(getAllOrdersForAdmin());
         setFormData(initialFormData);
-        toast({ title: response.message });
+
+        toast.success("Order status updated successfully"); // ✅ Updated toast method
       }
-    } catch (error) {
-      toast({ title: "Failed to update order status", description: error.message, variant: "destructive" });
+    } catch (error: any) {
+      toast.error("Failed to update order status: " + error.message); // ✅ Updated toast method
     }
   };
 
@@ -77,7 +80,7 @@ const AdminOrderDetailsView: React.FC<AdminOrderDetailsViewProps> = ({ orderDeta
         <div className="grid gap-2">
           {[
             { label: "Order ID", value: orderDetails._id },
-            { label: "Order Date", value: orderDetails.orderDate.split("T")[0] },
+            { label: "Order Date", value: orderDetails.createdAt.split("T")[0] },
             { label: "Order Price", value: `$${orderDetails.totalAmount}` },
             { label: "Payment Method", value: orderDetails.paymentMethod },
             { label: "Payment Status", value: orderDetails.paymentStatus },
@@ -94,7 +97,7 @@ const AdminOrderDetailsView: React.FC<AdminOrderDetailsViewProps> = ({ orderDeta
               className={`py-1 px-3 ${
                 orderDetails.orderStatus === "confirmed"
                   ? "bg-green-500"
-                  : orderDetails.orderStatus === "rejected"
+                  : orderDetails.orderStatus === "cancelled"
                   ? "bg-red-600"
                   : "bg-black"
               }`}
@@ -138,16 +141,17 @@ const AdminOrderDetailsView: React.FC<AdminOrderDetailsViewProps> = ({ orderDeta
             componentType: "select",
             options: [
               { id: "pending", label: "Pending" },
-              { id: "inProcess", label: "In Process" },
-              { id: "inShipping", label: "In Shipping" },
+              { id: "confirmed", label: "Confirmed" },
+              { id: "shipped", label: "Shipped" },
               { id: "delivered", label: "Delivered" },
-              { id: "rejected", label: "Rejected" },
+              { id: "cancelled", label: "Cancelled" },
             ],
           }]}
           formData={formData}
           setFormData={setFormData}
           buttonText="Update Order Status"
           onSubmit={handleUpdateStatus}
+          isBtnDisabled={!formData.status}
         />
       </div>
     </DialogContent>
