@@ -61,7 +61,7 @@ export const loginUser = createAsyncThunk<User, FormData, { rejectValue: string 
   );
 
 export const logoutUser = createAsyncThunk<void, void, { rejectValue: string }>(
-    "auth/login",
+    "auth/logout",
     async (_, { rejectWithValue }) => {
         return fetchData(async () => {
             const response = await axios.post(
@@ -146,6 +146,7 @@ const authSlice = createSlice({
                 state.isLoading = false;
                 state.user = null;
                 state.isAuthenticated = false;
+                state.error = null;
             });
     },
 });

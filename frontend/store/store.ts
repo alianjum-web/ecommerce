@@ -16,7 +16,6 @@ import commonFeatureSlice from "./common-slice";
 
 
 const rootReducer = combineReducers({
-  reducer: {
     auth: authReducer,
 
     adminProducts: adminProductsSlice,
@@ -30,7 +29,7 @@ const rootReducer = combineReducers({
     shopReview: shopReviewSlice,
 
     commonFeature: commonFeatureSlice,
-  },
+  
 });
 
 const persistConfig = {

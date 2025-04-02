@@ -1,11 +1,18 @@
+"use client"; // Required for using hooks in Next.js (if using App Router)
+
 import { AlignJustify, LogOut } from "lucide-react";
 import { Button } from "../ui/button";
 import { useDispatch } from "react-redux";
 import { logoutUser } from "@/store/auth-slice";
-import PropTypes from 'prop-types';
+import { Dispatch, SetStateAction } from "react";
 
-function AdminHeader({ setOpen }) {
-  const dispatch = useDispatch();
+// Define prop types for TypeScript
+interface AdminHeaderProps {
+  setOpen: Dispatch<SetStateAction<boolean>>;
+}
+
+const AdminHeader: React.FC<AdminHeaderProps> = ({ setOpen }) => {
+  const dispatch = useDispatch(); // Consider using useAppDispatch if you have a typed version
 
   function handleLogout() {
     dispatch(logoutUser());
@@ -13,10 +20,13 @@ function AdminHeader({ setOpen }) {
 
   return (
     <header className="flex items-center justify-between px-4 py-3 bg-background border-b">
+      {/* Toggle Sidebar Button */}
       <Button onClick={() => setOpen(true)} className="lg:hidden sm:block">
         <AlignJustify />
         <span className="sr-only">Toggle Menu</span>
       </Button>
+
+      {/* Logout Button */}
       <div className="flex flex-1 justify-end">
         <Button
           onClick={handleLogout}
@@ -28,10 +38,23 @@ function AdminHeader({ setOpen }) {
       </div>
     </header>
   );
-}
-AdminHeader.propTypes = {
-  setOpen: PropTypes.func.isRequired,
 };
 
-
 export default AdminHeader;
+
+
+/*
+
+Key Improvements:
+✅ Uses TypeScript with proper prop types (setOpen: Dispatch<SetStateAction<boolean>>).
+✅ Uses useAppDispatch (a typed version of useDispatch).
+✅ Removes PropTypes (not needed in TypeScript).
+✅ Follows Next.js best practices.
+
+
+Changes & Why?
+✔ use client; → Needed for using hooks in Next.js App Router.
+✔ Typed setOpen prop → Uses Dispatch<SetStateAction<boolean>> for proper TypeScript support.
+✔ Removed PropTypes → Not needed in TypeScript; we use an interface instead.
+✔ Consider useAppDispatch → If you have a typed version of useDispatch, use it for better TypeScript support.
+*/
