@@ -33,6 +33,7 @@ import { getFeatureImages } from "@/store/common-slice";
 import type { Product, ProductDetails } from "@/utils/productInterface";
 import { createLogger } from "@/utils/logger";
 import Image from "next/image";
+import { RootState } from "@/store/store";
 
 const logger = createLogger({ context: "ShoppingHome" });
 
@@ -73,8 +74,9 @@ export default function ShoppingHome() {
 
   // Redux state selectors
   const { productList, productDetails, isLoading, error } = useAppSelector(
-    (state) => state.shopProducts
+    (state: RootState ) => state.shopProducts
   );
+
   const { featureImageList } = useAppSelector((state) => state.commonFeature);
   const { user } = useAppSelector((state) => state.auth);
   

@@ -1,9 +1,15 @@
+// app/auth/login/page.tsx
 import AuthLogin from "@/components/auth/AuthLogin";
 
-export default async function LoginPage({
-  searchParams,
-}: {
-  searchParams: { redirect?: string };
-}) {
-  return <AuthLogin redirect={searchParams.redirect ?? "/"} />;
+interface PageProps {
+  searchParams: { 
+    redirect?: string;
+    requiredRole?: string;
+  };
+}
+
+export default function LoginPage({ searchParams }: PageProps) {
+  const { redirect = "/", requiredRole } = searchParams;
+  
+  return <AuthLogin redirect={redirect} requiredRole={requiredRole} />;
 }

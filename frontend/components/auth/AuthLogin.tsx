@@ -1,9 +1,10 @@
-"use client";
+// components/auth/AuthLogin.tsx
+'use client'
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import * as z from "zod";
-import { Button } from "@/components/ui/button";
+import { zodResolver } from "@hookform/resolvers/zod"
+import { useForm } from "react-hook-form"
+import * as z from "zod"
+import { Button } from "@/components/ui/button"
 import {
   Form,
   FormControl,
@@ -11,26 +12,29 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { useRouter, useSearchParams } from "next/navigation";
-import { toast } from "@/components/ui/sonner";
-import { useState } from "react";
-
-interface AuthLoginProps {
-  redirect?: string;
-}
+} from "@/components/ui/form"
+import { Input } from "@/components/ui/input"
+import { useRouter } from "next/navigation"
+import { toast } from "@/components/ui/sonner"
+import { useState } from "react"
+import { useAppDispatch } from "@/store/hooks"
+import { loginUser } from "@/store/auth-slice"
 
 const formSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
-});
+})
 
-export default function AuthLogin({ redirect = "/" }: AuthLoginProps) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const [isLoading, setIsLoading] = useState(false);
-  const requiredRole = searchParams.get('requiredRole');
+// Define the AuthLoginProps type
+type AuthLoginProps = {
+  redirect?: string;
+  requiredRole?: string;
+};
+
+export default function AuthLogin({ redirect = "/shopping/home", requiredRole }: AuthLoginProps) {
+  const router = useRouter()
+  const dispatch = useAppDispatch()
+  const [isLoading, setIsLoading] = useState(false)
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -38,47 +42,35 @@ export default function AuthLogin({ redirect = "/" }: AuthLoginProps) {
       email: "",
       password: "",
     },
-  });
+  })
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
-      setIsLoading(true);
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(values),
-      });
-
-      if (!response.ok) {
-        throw new Error(await response.text());
-      }
-
-      // Only check role if requiredRole is specified
-      if (requiredRole) {
-        const userData = await fetch('/api/auth/me');
-        if (!userData.ok) {
-          throw new Error('Failed to fetch user data');
+      setIsLoading(true)
+      const resultAction = await dispatch(loginUser(values))
+      
+      if (loginUser.fulfilled.match(resultAction)) {
+        if (requiredRole && (resultAction.payload as { user?: { role: string } }).user?.role !== requiredRole) {
+          router.push(`/app/unauth-page?returnUrl=${encodeURIComponent(redirect)}`)
+          return
         }
-        const user = await userData.json();
         
-        if (user.role !== requiredRole) {
-          router.push(`/unauth-page?returnUrl=${encodeURIComponent(redirect)}`);
-          return;
-        }
+        // Ensure redirect URL starts with /app
+        const finalRedirect = redirect.startsWith('/app') ? redirect : `/app${redirect}`
+        router.push(finalRedirect)
+        router.refresh()
+        toast.success("Login successful")
+      } else {
+        throw new Error(resultAction.payload || "Login failed")
       }
-
-      router.push(redirect);
-      router.refresh();
-      toast.success("Login successful");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Login failed");
-      console.error("Login error:", error);
+      toast.error(error instanceof Error ? error.message : "Login failed")
+      console.error("Login error:", error)
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
   }
+
 
   return (
     <div className="flex items-center justify-center min-h-screen">

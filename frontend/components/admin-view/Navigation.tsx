@@ -20,7 +20,7 @@ export default function AdminNavigation() {
     setIsLoggingOut(true)
     try {
       await dispatch(logoutUser()).unwrap()
-    } catch (error) {
+    } catch  {
       toast.error('Logout failed')
     } finally {
       setIsLoggingOut(false)

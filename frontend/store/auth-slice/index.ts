@@ -3,6 +3,7 @@ import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
 import axios from "axios";
 import type { User } from "@/utils/types";
 import type { RegisterFormData, LoginFormData } from "@/utils/auth";
+import { persistConfig } from "../store";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
@@ -22,12 +23,12 @@ const initialState: AuthState = {
   isInitialized: false,
 };
 
-// Helper function for API calls
+// Improved apiCall helper with better error handling
 const apiCall = async <T>(url: string, method: string, data?: any) => {
   try {
     const response = await axios({
       method,
-      url: `${BASE_URL}${url}`,
+      url: `${BASE_URL}${url}`, // Removed duplicate /api/auth prefix
       data,
       withCredentials: true,
       headers: {
@@ -36,7 +37,11 @@ const apiCall = async <T>(url: string, method: string, data?: any) => {
     });
     return response.data;
   } catch (error: any) {
-    throw error.response?.data?.message || "Something went wrong";
+    const errorMessage = error.response?.data?.message || 
+                        error.response?.data?.error || 
+                        error.message || 
+                        "Something went wrong";
+    throw new Error(errorMessage);
   }
 };
 
@@ -45,9 +50,10 @@ export const registerUser = createAsyncThunk<User, RegisterFormData, { rejectVal
   async (formData, { rejectWithValue }) => {
     try {
       const data = await apiCall<{ user: User }>("/api/auth/register", "POST", formData);
+      if (!data.user) throw new Error("User data not received");
       return data.user;
     } catch (error: any) {
-      return rejectWithValue(error);
+      return rejectWithValue(error.message);
     }
   }
 );
@@ -57,9 +63,10 @@ export const loginUser = createAsyncThunk<User, LoginFormData, { rejectValue: st
   async (formData, { rejectWithValue }) => {
     try {
       const data = await apiCall<{ user: User }>("/api/auth/login", "POST", formData);
+      if (!data.user) throw new Error("User data not received");
       return data.user;
     } catch (error: any) {
-      return rejectWithValue(error);
+      return rejectWithValue(error.message);
     }
   }
 );
@@ -71,7 +78,7 @@ export const logoutUser = createAsyncThunk<void, void, { rejectValue: string }>(
       await apiCall("/api/auth/logout", "POST");
       return undefined; // Explicitly return undefined
     } catch (error: any) {
-      return rejectWithValue(error);
+      return rejectWithValue(error.message);
     }
   }
 );
@@ -80,13 +87,22 @@ export const checkAuth = createAsyncThunk<User, void, { rejectValue: string }>(
   "auth/checkAuth",
   async (_, { rejectWithValue }) => {
     try {
-      const data = await apiCall<{ user: User }>("/api/auth/check-auth", "GET");
-      return data.user;
+      const response = await axios.get<{ user: User }>(`${BASE_URL}/api/auth/check-auth`, {
+        withCredentials: true
+      })
+      
+      if (!response.data.user) {
+        // Clear invalid persisted data
+        localStorage.removeItem(`persist:${persistConfig.key}`)
+        throw new Error('Session expired')
+      }
+      
+      return response.data.user
     } catch (error: any) {
-      return rejectWithValue(error);
+      return rejectWithValue(error.message)
     }
   }
-);
+)
 
 const authSlice = createSlice({
   name: "auth",
@@ -96,41 +112,58 @@ const authSlice = createSlice({
       state.user = null;
       state.isAuthenticated = false;
       state.error = null;
+      state.isInitialized = true; // Ensure we mark as initialized even on reset
     },
   },
   extraReducers: (builder) => {
-    // First handle all specific cases
     builder
+      // Register User
       .addCase(registerUser.fulfilled, (state, action: PayloadAction<User>) => {
         state.isLoading = false;
         state.user = action.payload;
         state.isAuthenticated = true;
         state.isInitialized = true;
+        state.error = null;
       })
+      
+      // Login User
       .addCase(loginUser.fulfilled, (state, action: PayloadAction<User>) => {
         state.isLoading = false;
         state.user = action.payload;
         state.isAuthenticated = true;
         state.isInitialized = true;
+        state.error = null;
       })
+      
+      // Check Auth
       .addCase(checkAuth.fulfilled, (state, action: PayloadAction<User>) => {
         state.isLoading = false;
         state.user = action.payload;
         state.isAuthenticated = true;
         state.isInitialized = true;
+        state.error = null;
       })
       .addCase(checkAuth.rejected, (state) => {
         state.isLoading = false;
         state.isInitialized = true;
+        state.isAuthenticated = false;
+        state.user = null;
       })
+      
+      // Logout User
       .addCase(logoutUser.fulfilled, (state) => {
         state.isLoading = false;
         state.user = null;
         state.isAuthenticated = false;
         state.isInitialized = true;
+        state.error = null;
+      })
+      .addCase(logoutUser.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload || "Logout failed";
       });
 
-    // Then add matchers
+    // Generic matchers
     builder
       .addMatcher(
         (action) => action.type.endsWith('/pending'),
@@ -144,6 +177,12 @@ const authSlice = createSlice({
         (state, action: PayloadAction<string | undefined>) => {
           state.isLoading = false;
           state.error = action.payload || "Request failed";
+          // If any auth request fails, consider user not authenticated
+          // Except for logout which might fail but we still want to clear auth
+          if (!action.type.includes('logout')) {
+            state.isAuthenticated = false;
+            state.user = null;
+          }
         }
       );
   },

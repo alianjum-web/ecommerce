@@ -58,20 +58,35 @@ const rootReducer = combineReducers({
 });
 
 
-
-const persistConfig = {
+export const persistConfig = {
   key: "root",
-  storage,
+  storage: {
+    ...storage,
+    // Add size limit handling
+    setItem: (key: string, value: string) => {
+      try {
+        if (value.length > 5 * 1024 * 1024) { // 5MB limit
+          console.warn('State too large, only persisting critical data')
+          const parsed = JSON.parse(value)
+          // Only persist auth data if limit exceeded
+          return storage.setItem(key, JSON.stringify({
+            auth: parsed.auth
+          }))
+        }
+        return storage.setItem(key, value)
+      } catch (error) {
+        console.error('Failed to persist state:', error)
+        return Promise.resolve(); // Ensure a value is returned in the catch block
+      }
+    }
+  },
   whitelist: ["auth", "shopCart", "shopAddress"],
   version: 1,
-  // Optional: Add state reconciler if you need migration
   migrate: (state: any) => {
-    if (!state) {
-      return Promise.resolve(undefined);
-    }
-    return Promise.resolve(state);
+    if (!state) return Promise.resolve(undefined)
+    return Promise.resolve(state)
   },
-};
+}
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);
 
@@ -86,6 +101,14 @@ export const store = configureStore({
     }),
   devTools: process.env.NODE_ENV !== "production",
 });
+// Add to your store configuration
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (event) => {
+    if (event.key === `persist:${persistConfig.key}`) {
+      store.dispatch({ type: 'REHYDRATE_FROM_STORAGE' })
+    }
+  })
+}
 
 export const persistor = persistStore(store);
 

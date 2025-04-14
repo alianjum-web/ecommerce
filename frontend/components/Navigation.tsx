@@ -20,7 +20,7 @@ export default function Navigation() {
       toast.success('Logged out',{
         description: 'You have been successfully logged out',
       })
-    } catch (error) {
+    } catch {
       toast.error('Error',{
         description: 'Failed to log out',
       })
