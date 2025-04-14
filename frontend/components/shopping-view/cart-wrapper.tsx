@@ -4,15 +4,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "../ui/button";
 import { SheetContent, SheetHeader, SheetTitle } from "../ui/sheet";
 import UserCartItemsContent from "./cart-items-content";
-
-interface CartItem {
-  productId: string;
-  title: string;
-  image: string;
-  price: number;
-  salePrice?: number;
-  quantity: number;
-}
+import { CartItem } from "@/utils/types";
 
 interface UserCartWrapperProps {
   cartItems: CartItem[];

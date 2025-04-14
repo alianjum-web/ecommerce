@@ -1,13 +1,8 @@
 import axios from "axios";
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+import type { CartItem } from "@/utils/types";
 
-interface CartItem {
-    productId: string;
-    name: string;
-    price: number;
-    quantity: number;
-}
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
 interface CartState {
     cartItems: CartItem[];
@@ -63,31 +58,31 @@ export const fetchCartItems = createAsyncThunk<
 });
 
 export const deleteCartItem = createAsyncThunk<
-CartItem[],
+{ success: boolean; data: CartItem[] },
 { userId: string; productId: string },
 { rejectValue: string }
 >(
     "cart/daleteCartItem",
     async ({ userId, productId}, { rejectWithValue }) => {
         return fetchData(async () => {
-            const response = await axios.delete<{ data: CartItem[] }>(
+            const response = await axios.delete<{ success: boolean, data: CartItem[] }>(
                 `${BASE_URL}/api/shop/cart/${userId}/${productId}`
             );
     
-            return response.data.data;
+            return { success: true, data: response.data.data };
         }).catch((error) => rejectWithValue(error));
     }
 )
 
 export const updateCartQuantity = createAsyncThunk<
-CartItem[],
+{ success: boolean; data: CartItem[] },  //  <--  return type
 { userId: string; productId: string; quantity: number },
 { rejectValue: string }
  >(
     "cart/updateCartQuantity",
     async ({ userId, productId, quantity }, { rejectWithValue }) => {
         return fetchData(async () => {
-            const response = await axios.put<{ data: CartItem[] }>(
+            const response = await axios.put<{ success: boolean, data: CartItem[] }>(
                 `${BASE_URL}/api/shop/cart/update-cart`,
                 {
                     userId,
@@ -96,7 +91,7 @@ CartItem[],
                 }
             );
     
-            return response.data.data;
+            return { success: true, data: response.data.data };
         }).catch((error) => rejectWithValue(error));
     }
 )
@@ -135,9 +130,9 @@ const shoppingCartSlice = createSlice({
                 state.isLoading = true;
                 state.error = null;
             })
-            .addCase(deleteCartItem.fulfilled, (state, action: PayloadAction<CartItem[]>) => {
+            .addCase(deleteCartItem.fulfilled, (state, action: PayloadAction<{ success: boolean; data: CartItem[] }>) => {
                 state.isLoading = false;
-                state.cartItems = action.payload;
+                state.cartItems = action.payload.data;
             })
             .addCase(deleteCartItem.rejected, (state, action) => {
                 state.isLoading = false;
@@ -147,10 +142,10 @@ const shoppingCartSlice = createSlice({
                 state.isLoading = true;
                 state.error = null;
             })
-            .addCase(updateCartQuantity.fulfilled, (state, action: PayloadAction<CartItem[]>) => {
+            .addCase(updateCartQuantity.fulfilled, (state, action: PayloadAction<{ success: boolean; data: CartItem[] }>) => {
                 state.isLoading = false;
-                state.cartItems = action.payload;
-            })
+                state.cartItems = action.payload.data; 
+              })              
             .addCase(updateCartQuantity.rejected, (state, action) => {
                 state.isLoading = false;
                 state.error = action.payload || "Failed to update cart"

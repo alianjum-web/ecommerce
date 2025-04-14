@@ -10,7 +10,7 @@ import {
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
-interface Order {
+export interface Order {
   _id: string;
   userId: string;
   payerId: string;
@@ -21,6 +21,8 @@ interface Order {
   paymentStatus: PaymentStatus;
   totalAmount: number;
   paymentId?: string;
+  orderDate?: string;
+  orderUpdateDate?: string;
   createdAt: string;
   updatedAt: string;
 }

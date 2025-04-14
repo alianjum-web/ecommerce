@@ -2,15 +2,14 @@ import multer from "multer";
 import sharp from "sharp";
 import cloudinary from "cloudinary";
 import logger from "../utils/logger.js";
-import dotenv from "dotenv";
 import { validateFile } from "../utils/fileValidation.js";
-dotenv.config();
+import env from '../config/env.js';
 
 // Configure Cloudinary for image hosting
 cloudinary.v2.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
+  cloud_name: env.CLOUDINARY_CLOUD_NAME,
+  api_key: env.CLOUDINARY_API_KEY,
+  api_secret: env.CLOUDINARY_API_SECRET,
 });
 
 //set up memory storage for multer

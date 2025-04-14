@@ -13,6 +13,10 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
+    "baseUrl": ".", // Add base URL for imports
+    "forceConsistentCasingInFileNames": true, // Add for stricter file naming
+    "noUncheckedIndexedAccess": true, // Better array/object access checking
+    "noImplicitReturns": true, // Ensure all code paths return
     "plugins": [
       {
         "name": "next"

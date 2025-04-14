@@ -1,7 +1,7 @@
 "use client"
 
 import { useTheme } from "next-themes"
-import { Toaster as Sonner, ToasterProps } from "sonner"
+import { Toaster as Sonner, toast, ToasterProps } from "sonner"
 
 const Toaster = ({ ...props }: ToasterProps) => {
   const { theme = "system" } = useTheme()
@@ -10,16 +10,18 @@ const Toaster = ({ ...props }: ToasterProps) => {
     <Sonner
       theme={theme as ToasterProps["theme"]}
       className="toaster group"
-      style={
-        {
-          "--normal-bg": "var(--popover)",
-          "--normal-text": "var(--popover-foreground)",
-          "--normal-border": "var(--border)",
-        } as React.CSSProperties
-      }
+      toastOptions={{
+        classNames: {
+          toast: "group toast",
+          title: "text-sm font-medium",
+          description: "text-sm opacity-90",
+          error: "group-[.toast-error]:bg-destructive group-[.toast-error]:text-destructive-foreground",
+        }
+      }}
       {...props}
     />
   )
 }
 
-export { Toaster }
+// Export the original Sonner toast function directly
+export { Toaster, toast }

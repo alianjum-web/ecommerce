@@ -9,7 +9,7 @@ import {
 } from "react-router-dom";
 import { Sheet, SheetContent, SheetTrigger } from "../ui/sheet";
 import { Button } from "../ui/button";
-import { useDispatch, useSelector } from "react-redux";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { shoppingViewHeaderMenuItems } from "@/config";
 import {
   DropdownMenu,
@@ -25,7 +25,7 @@ import UserCartWrapper from "./cart-wrapper";
 import { useEffect, useState } from "react";
 import { fetchCartItems } from "@/store/shop/cart-slice";
 import { Label } from "../ui/label";
-import { RootState } from "@/store";
+import { RootState } from "@/store/store";
 
 // ✅ Define types for menu items
 interface MenuItem {
@@ -33,21 +33,10 @@ interface MenuItem {
   label: string;
   path: string;
 }
-
-// ✅ Define types for Redux state
-interface User {
-  id: string;
-  userName: string;
-}
-
-interface CartState {
-  items: { id: string; name: string; quantity: number }[];
-}
-
 const MenuItems: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [, setSearchParams] = useSearchParams();
 
   function handleNavigate(menuItem: MenuItem) {
     sessionStorage.removeItem("filters");
@@ -59,9 +48,11 @@ const MenuItems: React.FC = () => {
 
     sessionStorage.setItem("filters", JSON.stringify(currentFilter));
 
-    location.pathname.includes("listing") && currentFilter
-      ? setSearchParams(new URLSearchParams(`?category=${menuItem.id}`))
-      : navigate(menuItem.path);
+    if (location.pathname.includes("listing") && currentFilter) {
+      setSearchParams(new URLSearchParams({ category: menuItem.id || "" }));
+    } else {
+      navigate(menuItem.path);
+    }
   }
 
   return (
@@ -79,22 +70,23 @@ const MenuItems: React.FC = () => {
   );
 };
 
+
 const HeaderRightContent: React.FC = () => {
-  const user = useSelector((state: RootState) => state.auth.user) as User | null;
-  const cartItems = useSelector((state: RootState) => state.shopCart.cartItems) as CartState;
+  const user = useAppSelector((state: RootState) => state.auth.user);
+  const cartItems = useAppSelector((state: RootState) => state.shopCart.cartItems);
   const [openCartSheet, setOpenCartSheet] = useState(false);
   const navigate = useNavigate();
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
 
   function handleLogout() {
     dispatch(logoutUser());
   }
 
   useEffect(() => {
-    if (user?.id) {
-      dispatch(fetchCartItems(user.id));
+    if (user?._id) {
+      dispatch(fetchCartItems(user._id));
     }
-  }, [dispatch, user?.id]);
+  }, [dispatch, user?._id]);
 
   return (
     <div className="flex lg:items-center lg:flex-row flex-col gap-4">
@@ -107,13 +99,13 @@ const HeaderRightContent: React.FC = () => {
         >
           <ShoppingCart className="w-6 h-6" />
           <span className="absolute top-[-5px] right-[2px] font-bold text-sm">
-            {cartItems?.items?.length || 0}
+            {cartItems?.length || 0}
           </span>
           <span className="sr-only">User cart</span>
         </Button>
         <UserCartWrapper
           setOpenCartSheet={setOpenCartSheet}
-          cartItems={cartItems?.items ?? []}
+          cartItems={cartItems ?? []}
         />
       </Sheet>
 

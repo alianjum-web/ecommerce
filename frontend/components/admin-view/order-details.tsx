@@ -1,61 +1,40 @@
 "use client";
 
 import { useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import CommonForm from "../common/form";
 import { DialogContent } from "../ui/dialog";
 import { Label } from "../ui/label";
 import { Separator } from "../ui/separator";
 import { Badge } from "../ui/badge";
-import { toast } from "sonner"; // ✅ Replacing old `useToast` import
+import { toast } from "sonner";
 
-import { AppDispatch, RootState } from "@/store/store";
 import {
   getAllOrdersForAdmin,
   getOrderDetailsForAdmin,
   updateOrderStatus,
+  Order,
 } from "@/store/admin/order-slice";
 
-interface CartItem {
-  title: string;
-  quantity: number;
-  price: number;
-}
-
-interface AddressInfo {
-  address: string;
-  city: string;
-  pincode: string;
-  phone: string;
-  notes?: string;
-}
-
-interface OrderDetails {
-  _id: string;
-  orderDate: string;
-  totalAmount: number;
-  paymentMethod: string;
-  paymentStatus: string;
-  orderStatus: string;
-  cartItems: CartItem[];
-  addressInfo: AddressInfo;
-  createdAt: string;
-}
-
+// Using existing Order type from order-slice instead of redefining here
 interface AdminOrderDetailsViewProps {
-  orderDetails: OrderDetails;
+  orderDetails: Order;
 }
 
+// Initialize with appropriate orderStatus type
 const initialFormData = { status: "" };
 
-const AdminOrderDetailsView: React.FC<AdminOrderDetailsViewProps> = ({ orderDetails }) => {
+const AdminOrderDetailsView: React.FC<AdminOrderDetailsViewProps> = ({
+  orderDetails,
+}) => {
   const [formData, setFormData] = useState(initialFormData);
-  const dispatch = useDispatch<AppDispatch>();
-  const { user } = useSelector((state: RootState) => state.auth);
+  const dispatch = useAppDispatch(); // Use typed dispatch
+  const { user } = useAppSelector((state) => state.auth);
 
-  const handleUpdateStatus = async (event: React.FormEvent) => {
-    event.preventDefault();
-    const { status } = formData;
+  const handleUpdateStatus = async (data: Record<string, string>) => {
+    const { status } = data;
+
+    if (!status) return;
 
     try {
       const response = await dispatch(
@@ -65,12 +44,16 @@ const AdminOrderDetailsView: React.FC<AdminOrderDetailsViewProps> = ({ orderDeta
       if (response) {
         dispatch(getOrderDetailsForAdmin(orderDetails._id));
         dispatch(getAllOrdersForAdmin());
-        setFormData(initialFormData);
+        setFormData({ status });
 
-        toast.success("Order status updated successfully"); // ✅ Updated toast method
+        toast.success("Order status updated successfully");
       }
-    } catch (error: any) {
-      toast.error("Failed to update order status: " + error.message); // ✅ Updated toast method
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        toast.error("Failed to update order status: " + error.message);
+      } else {
+        toast.error("Failed to update order status due to an unknown error.");
+      }
     }
   };
 
@@ -80,7 +63,10 @@ const AdminOrderDetailsView: React.FC<AdminOrderDetailsViewProps> = ({ orderDeta
         <div className="grid gap-2">
           {[
             { label: "Order ID", value: orderDetails._id },
-            { label: "Order Date", value: orderDetails.createdAt.split("T")[0] },
+            {
+              label: "Order Date",
+              value: orderDetails.createdAt.split("T")[0],
+            },
             { label: "Order Price", value: `$${orderDetails.totalAmount}` },
             { label: "Payment Method", value: orderDetails.paymentMethod },
             { label: "Payment Status", value: orderDetails.paymentStatus },
@@ -130,28 +116,30 @@ const AdminOrderDetailsView: React.FC<AdminOrderDetailsViewProps> = ({ orderDeta
             <span>{orderDetails.addressInfo.city}</span>
             <span>{orderDetails.addressInfo.pincode}</span>
             <span>{orderDetails.addressInfo.phone}</span>
-            {orderDetails.addressInfo.notes && <span>{orderDetails.addressInfo.notes}</span>}
+            {orderDetails.addressInfo.notes && (
+              <span>{orderDetails.addressInfo.notes}</span>
+            )}
           </div>
         </div>
 
         <CommonForm
-          formControls={[{
-            label: "Order Status",
-            name: "status",
-            componentType: "select",
-            options: [
-              { id: "pending", label: "Pending" },
-              { id: "confirmed", label: "Confirmed" },
-              { id: "shipped", label: "Shipped" },
-              { id: "delivered", label: "Delivered" },
-              { id: "cancelled", label: "Cancelled" },
-            ],
-          }]}
-          formData={formData}
-          setFormData={setFormData}
+          formControls={[
+            {
+              label: "Order Status",
+              name: "status",
+              componentType: "select",
+              options: [
+                { id: "pending", label: "Pending" },
+                { id: "confirmed", label: "Confirmed" },
+                { id: "shipped", label: "Shipped" },
+                { id: "delivered", label: "Delivered" },
+                { id: "cancelled", label: "Cancelled" },
+              ],
+            },
+          ]}
           buttonText="Update Order Status"
           onSubmit={handleUpdateStatus}
-          isBtnDisabled={!formData.status}
+          defaultValues={formData} // Use defaultValues instead of formData
         />
       </div>
     </DialogContent>

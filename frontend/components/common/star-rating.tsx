@@ -1,11 +1,16 @@
 import { StarIcon } from "lucide-react";
 import { Button } from "../ui/button";
+import { MouseEventHandler } from "react";
 
-function StarRatingComponent({ rating, handleRatingChange }) {
-  console.log(rating, "rating");
+interface StarRatingComponentProps {
+  rating: number;
+  handleRatingChange?: (star: number) => void;
+}
 
+function StarRatingComponent({ rating, handleRatingChange }: StarRatingComponentProps) {
   return [1, 2, 3, 4, 5].map((star) => (
     <Button
+      key={`star-${star}`} // Added key prop
       className={`p-2 rounded-full transition-colors ${
         star <= rating
           ? "text-yellow-500 hover:bg-black"
@@ -13,7 +18,11 @@ function StarRatingComponent({ rating, handleRatingChange }) {
       }`}
       variant="outline"
       size="icon"
-      onClick={handleRatingChange ? () => handleRatingChange(star) : null}
+      onClick={
+        handleRatingChange 
+          ? (() => handleRatingChange(star)) as MouseEventHandler<HTMLButtonElement> 
+          : undefined
+      }
     >
       <StarIcon
         className={`w-6 h-6 ${

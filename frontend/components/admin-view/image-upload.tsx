@@ -1,12 +1,13 @@
 "use client"; // Required for using hooks in Next.js (App Router)
 
 import { FileIcon, UploadCloudIcon, XIcon } from "lucide-react";
-import { Input } from "../ui/input";
-import { Label } from "../ui/label";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Button } from "../ui/button";
+import { Button } from "@/components/ui/button";
 import axios from "axios";
-import { Skeleton } from "../ui/skeleton";
+import { Skeleton } from "@/components/ui/skeleton";
+import Image from "next/image";
 
 interface ProductImageUploadProps {
   imageFile: File | null;
@@ -18,6 +19,7 @@ interface ProductImageUploadProps {
   isEditMode: boolean;
   isCustomStyling?: boolean;
 }
+export type ImageUploadHandler = (file: File | null) => void;
 
 const ProductImageUpload: React.FC<ProductImageUploadProps> = ({
   imageFile,
@@ -158,12 +160,12 @@ const ProductImageUpload: React.FC<ProductImageUploadProps> = ({
           </div>
         )}
       </div>
-      /* Error Message */
+       {/* Error Message  */}
       {uploadError && <p className="text-red-500 mt-2">{uploadError}</p>}
       {/* Upload Image Preview */}
       {uploadedImageUrl && (
         <div className="mt-4">
-          <img
+          <Image
             src={uploadedImageUrl}
             alt="Uploaded"
             className="w-full h-auto"

@@ -1,3 +1,6 @@
+
+"use client"
+
 import { useEffect, useState } from "react";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
@@ -11,33 +14,38 @@ import {
   TableRow,
 } from "../ui/table";
 import ShoppingOrderDetailsView from "./order-details";
-import { useDispatch, useSelector } from "react-redux";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
   getAllOrdersByUserId,
   getOrderDetails,
   resetOrderDetails,
 } from "@/store/shop/order-slice";
 import { Badge } from "../ui/badge";
+import { RootState } from "@/store/store";
 
 function ShoppingOrders() {
   const [openDetailsDialog, setOpenDetailsDialog] = useState(false);
-  const dispatch = useDispatch();
-  const { user } = useSelector((state) => state.auth);
-  const { orderList, orderDetails } = useSelector((state) => state.shopOrder);
+  const dispatch = useAppDispatch();
+  const { user } = useAppSelector((state: RootState) => state.auth);
+  const { orderList, orderDetails } = useAppSelector((state: RootState) => state.shopOrder);
 
-  function handleFetchOrderDetails(getId) {
+  interface FetchOrderDetailsParams {
+    getId: string;
+  }
+
+  function handleFetchOrderDetails({ getId }: FetchOrderDetailsParams): void {
     dispatch(getOrderDetails(getId));
   }
 
   useEffect(() => {
-    dispatch(getAllOrdersByUserId(user?.id));
-  }, [dispatch]);
+    if (user?._id) {
+      dispatch(getAllOrdersByUserId({ userId: user._id }));
+    }
+  }, [dispatch, user?._id]);
 
   useEffect(() => {
     if (orderDetails !== null) setOpenDetailsDialog(true);
   }, [orderDetails]);
-
-  console.log(orderDetails, "orderDetails");
 
   return (
     <Card>
@@ -60,15 +68,15 @@ function ShoppingOrders() {
           <TableBody>
             {orderList && orderList.length > 0
               ? orderList.map((orderItem) => (
-                  <TableRow>
+                  <TableRow key={orderItem._id}>
                     <TableCell>{orderItem?._id}</TableCell>
-                    <TableCell>{orderItem?.orderDate.split("T")[0]}</TableCell>
+                    <TableCell>{orderItem?.orderDate?.split("T")[0] ?? "N/A"}</TableCell>
                     <TableCell>
                       <Badge
                         className={`py-1 px-3 ${
                           orderItem?.orderStatus === "confirmed"
                             ? "bg-green-500"
-                            : orderItem?.orderStatus === "rejected"
+                            : orderItem?.orderStatus === "cancelled"
                             ? "bg-red-600"
                             : "bg-black"
                         }`}
@@ -87,12 +95,12 @@ function ShoppingOrders() {
                       >
                         <Button
                           onClick={() =>
-                            handleFetchOrderDetails(orderItem?._id)
+                            handleFetchOrderDetails({ getId: orderItem?._id })
                           }
                         >
                           View Details
                         </Button>
-                        <ShoppingOrderDetailsView orderDetails={orderDetails} />
+                        <ShoppingOrderDetailsView orderDetails={orderDetails ?? undefined} />
                       </Dialog>
                     </TableCell>
                   </TableRow>

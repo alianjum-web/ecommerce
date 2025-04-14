@@ -1,10 +1,9 @@
 import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
 import axios from "axios";
-import { error } from "console";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
-interface ProductSearchResult {
+export interface ProductSearchResult {
   _id: string;
   imageUrl: string;
   imagePublicId: string;
@@ -32,11 +31,18 @@ const initialState: SearchState = {
   error: null,
 };
 
+// Update the fetchData function in your search slice
 const fetchData = async <T>(callback: () => Promise<T>): Promise<T> => {
   try {
     return await callback();
   } catch (error: any) {
-    throw error.response?.data?.message || "Something went wrong!";
+    // More comprehensive error handling
+    if (axios.isAxiosError(error)) {
+      throw error.response?.data?.message || 
+            error.message || 
+            "Network error occurred";
+    }
+    throw "An unexpected error occurred";
   }
 };
 

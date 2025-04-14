@@ -1,6 +1,6 @@
 import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
 import axios from "axios";
-import { Product } from "@/utils/productInterface";
+import { Product, ApiResponse } from "@/utils/productInterface";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
@@ -27,27 +27,6 @@ const fetchData = async <T>(callback: () => Promise<T>): Promise<T> => {
   }
 };
 
-// create async function for API call
-export const addNewProduct = createAsyncThunk<Product, Product>(
-  "products/addNewProduct",
-  async (formData, { rejectWithValue }) => {
-    try {
-      const result = await axios.post<Product>(
-        `${BASE_URL}/api/admin/product/add`,
-        formData,
-        {
-          headers: { "Content-Type": "application/json" },
-        }
-      );
-
-      return result.data;
-    } catch (error: any) {
-      return rejectWithValue(
-        error.response?.data?.message || "Failed to add Product"
-      );
-    }
-  }
-);
 
 export const fetchAllProducts = createAsyncThunk<Product[]>(
   "products/fetchAllProducts",
@@ -61,29 +40,93 @@ export const fetchAllProducts = createAsyncThunk<Product[]>(
   }
 );
 
+// products-slice.ts
+export const addNewProduct = createAsyncThunk<
+  Product, // Return type when fulfilled
+  Omit<Product, '_id' | 'createdAt' | 'updatedAt'>, // Input type
+  { rejectValue: string }
+>(
+  "products/addNewProduct",
+  async (formData, { rejectWithValue }) => {
+    try {
+      const response = await axios.post<ApiResponse<Product>>(
+        `${BASE_URL}/api/admin/product/add`,
+        formData,
+        { headers: { "Content-Type": "application/json" } }
+      );
+      
+      if (!response.data.success) {
+        return rejectWithValue(response.data.message || "Failed to add product");
+      }
+      
+      if (!response.data.data) {
+        return rejectWithValue("No product data returned");
+      }
+      
+      return response.data.data;
+    } catch (error: any) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to add Product"
+      );
+    }
+  }
+);
+
 export const editProduct = createAsyncThunk<
   Product,
-  { id: number; formData: Product }
->("products/editProduct", async ({ id, formData }, { rejectWithValue }) => {
-  return fetchData(async () => {
-    const result = await axios.put<Product>(
-      `${BASE_URL}/api/admin/product/edit/${id}`,
-      formData,
-      {
-        headers: { "Content-Type": "application/json" },
+  { id: string; formData: Partial<Product> },
+  { rejectValue: string }
+>(
+  "products/editProduct",
+  async ({ id, formData }, { rejectWithValue }) => {
+    try {
+      const response = await axios.put<ApiResponse<Product>>(
+        `${BASE_URL}/api/admin/product/edit/${id}`,
+        formData,
+        { headers: { "Content-Type": "application/json" } }
+      );
+      
+      if (!response.data.success) {
+        return rejectWithValue(response.data.message || "Failed to edit product");
       }
-    );
-    return result.data;
-  }).catch((error) => rejectWithValue(error));
-});
+      
+      if (!response.data.data) {
+        return rejectWithValue("No product data returned");
+      }
+      
+      return response.data.data;
+    } catch (error: any) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to edit Product"
+      );
+    }
+  }
+);
 
-export const deleteProduct = createAsyncThunk<number, number>(
+
+export const deleteProduct = createAsyncThunk<
+  { success: boolean; id: string }, // Fulfilled return type
+  string, // Argument type (id)
+  { rejectValue: string }
+>(
   "products/deleteProduct",
   async (id, { rejectWithValue }) => {
-    return fetchData(async () => {
-      await axios.delete(`${BASE_URL}/api/admin/product/delete/${id}`);
-      return id;
-    }).catch((error) => rejectWithValue(error));
+    try {
+      const response = await axios.delete<{ 
+        success: boolean;
+        message?: string;
+      }>(`${BASE_URL}/api/admin/product/delete/${id}`);
+      
+      if (!response.data.success) {
+        return rejectWithValue(response.data.message || "Failed to delete product");
+      }
+      
+      return { success: true, id };
+    } catch (error: any) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to delete product"
+      );
+    }
   }
 );
 
@@ -128,9 +171,9 @@ const adminProductsSlice = createSlice({
       // Delete Product
       .addCase(
         deleteProduct.fulfilled,
-        (state, action: PayloadAction<number>) => {
+        (state, action: PayloadAction<{ success: boolean, id: string }>) => {
           state.productList = state.productList.filter(
-            (p) => p._id !== action.payload.toString()
+            (p) => p._id !== action.payload.id
           );
         }
       );

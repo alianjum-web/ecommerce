@@ -1,6 +1,6 @@
 "use client";
 
-import { FC } from "react";
+import { FC, ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import {
   BadgeCheck,
@@ -10,14 +10,16 @@ import {
 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "../ui/sheet";
 
+// Define types for menu items
 interface MenuItem {
   id: string;
   label: string;
   path: string;
-  icon: JSX.Element;
+  icon: ReactNode; // Changed from JSX.Element to ReactNode
 }
 
-const adminSidebarMenuItems: MenuItem[] = [
+// Define menu items outside component to prevent unnecessary re-renders
+const ADMIN_SIDEBAR_MENU_ITEMS: MenuItem[] = [
   {
     id: "dashboard",
     label: "Dashboard",
@@ -42,23 +44,27 @@ interface MenuItemsProps {
   setOpen?: (open: boolean) => void;
 }
 
+// Extract MenuItems as a separate component
 const MenuItems: FC<MenuItemsProps> = ({ setOpen }) => {
   const router = useRouter();
 
+  const handleItemClick = (path: string) => {
+    router.push(path);
+    setOpen?.(false);
+  };
+
   return (
-    <nav className="mt-8 flex-col flex gap-2">
-      {adminSidebarMenuItems.map((menuItem) => (
-        <div
+    <nav className="mt-8 flex flex-col gap-2" aria-label="Admin navigation">
+      {ADMIN_SIDEBAR_MENU_ITEMS.map((menuItem) => (
+        <button
           key={menuItem.id}
-          onClick={() => {
-            router.push(menuItem.path);
-            setOpen?.(false);
-          }}
-          className="flex cursor-pointer text-xl items-center gap-2 rounded-md px-3 py-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+          onClick={() => handleItemClick(menuItem.path)}
+          className="flex cursor-pointer text-xl items-center gap-2 rounded-md px-3 py-2 text-muted-foreground hover:bg-muted hover:text-foreground text-left"
+          aria-label={menuItem.label}
         >
           {menuItem.icon}
           <span>{menuItem.label}</span>
-        </div>
+        </button>
       ))}
     </nav>
   );
@@ -72,29 +78,43 @@ interface AdminSideBarProps {
 const AdminSideBar: FC<AdminSideBarProps> = ({ open, setOpen }) => {
   const router = useRouter();
 
+  const handleLogoClick = () => {
+    router.push("/admin/dashboard");
+  };
+
   return (
     <>
+      {/* Mobile sidebar */}
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent side="left" className="w-64">
           <div className="flex flex-col h-full">
             <SheetHeader className="border-b">
-              <SheetTitle className="flex gap-2 mt-5 mb-5">
-                <ChartNoAxesCombined size={30} />
-                <h1 className="text-2xl font-extrabold">Admin Panel</h1>
+              <SheetTitle className="flex gap-2 my-5">
+                <button 
+                  onClick={handleLogoClick} 
+                  className="flex items-center gap-2"
+                  aria-label="Go to Dashboard"
+                >
+                  <ChartNoAxesCombined size={30} />
+                  <h1 className="text-2xl font-extrabold">Admin Panel</h1>
+                </button>
               </SheetTitle>
             </SheetHeader>
             <MenuItems setOpen={setOpen} />
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* Desktop sidebar */}
       <aside className="hidden w-64 flex-col border-r bg-background p-6 lg:flex">
-        <div
-          onClick={() => router.push("/admin/dashboard")}
+        <button
+          onClick={handleLogoClick}
           className="flex cursor-pointer items-center gap-2"
+          aria-label="Go to Dashboard"
         >
           <ChartNoAxesCombined size={30} />
           <h1 className="text-2xl font-extrabold">Admin Panel</h1>
-        </div>
+        </button>
         <MenuItems />
       </aside>
     </>

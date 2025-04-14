@@ -1,5 +1,5 @@
 import mongoose, { Schema } from "mongoose";
-import  logger from "../utils/logger.js";
+
 // Product Schema
 const ProductSchema = new Schema(
   {

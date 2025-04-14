@@ -106,10 +106,10 @@ const loginUser = async (req, res) => {
         message: "Incorrect password. Please try again.",
       });
     }
-
+    console.log("password is valid")
     // Generate JWT token
     const token = user.generateAccessToken();
-
+    console.log(token);
     // Set cookie and send response
     res.cookie("token", token, COOKIE_OPTIONS).status(200).json({
       success: true,

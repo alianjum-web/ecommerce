@@ -55,11 +55,11 @@ const OrderSchema = new Schema({
     type: Number,
     required: true,
   },
-  // orderDate: {
-  //   type: Date,
-  //   default: Date.now,
-  // },
-  // orderUpdateDate: Date,
+  orderDate: {
+    type: Date,
+    default: Date.now
+  },
+  updateOrderDate: Date,
   paymentId: {
     type: String,
     required: function() {  //ensures that paymentId is only required when the payment has been successfully completed.and status is paid

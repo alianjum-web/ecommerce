@@ -1,6 +1,8 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";  // You forgot to import JWT
+import env from '../config/env.js';
+
 
 const UserSchema = new mongoose.Schema(
   {
@@ -53,8 +55,8 @@ UserSchema.methods.generateAccessToken = function () {
       fullName: this.fullName,
       role: this.role,  // Include role in JWT
     },
-    process.env.ACCESS_TOKEN_SECRET,
-    { expiresIn: process.env.ACCESS_TOKEN_EXPIRY }
+    env.ACCESS_TOKEN_SECRET,
+    { expiresIn: env.ACCESS_TOKEN_EXPIRY }
   );
 };
 

@@ -31,6 +31,7 @@ export interface Order {
   paymentStatus: "pending" | "paid" | "failed";
   totalAmount: number;
   paymentId?: string;
+  orderDate?:string;
   createdAt: string;
   updatedAt: string;
 }
@@ -74,12 +75,20 @@ export const getOrderDetailsForAdmin = createAsyncThunk<Order, string, { rejectV
   async (id, { rejectWithValue }) => {
    return fetchData(async() => {
     const response = await axios.get<{ data: Order }>(`${BASE_URL}/api/admin/orders/details/${id}`);
-    return response.data.data;
+    return {
+      ...response.data.data,
+      orderDate: response.data.data.createdAt
+    };
    }).catch((error) => rejectWithValue(error));
   }
 );
 
+/*
 
+      ...response.data,
+      orderDate: response.data.createdAt, // Map createdAt to orderDate
+    };
+*/
 export const updateOrderStatus = createAsyncThunk<
 Order,
 { id: string; orderStatus: string },

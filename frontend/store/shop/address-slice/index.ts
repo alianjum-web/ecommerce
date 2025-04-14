@@ -3,13 +3,14 @@ import axios from "axios";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
-interface Address {
+export interface Address {
+  _id: string;
   userId: string;
   address: string;
   city: string;
   pincode: string;
   phone: string;
-  notes: string;
+  notes: string; // Changed from optional to required
 }
 
 interface AddressState {
@@ -24,6 +25,13 @@ const initialState: AddressState = {
   error: null,
 };
 
+// Unified API response type
+interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  message?: string;
+}
+
 const fetchData = async <T>(callback: () => Promise<T>): Promise<T> => {
   try {
     return await callback();
@@ -31,68 +39,76 @@ const fetchData = async <T>(callback: () => Promise<T>): Promise<T> => {
     throw error.response?.data?.message || "Something went wrong!";
   }
 };
+
 export const addNewAddress = createAsyncThunk<
   Address[],
   { userId: string; formData: Address },
   { rejectValue: string }
->(
-  "address/addNewAddress",
-  async ({ userId, formData }, { rejectWithValue }) => {
-    return fetchData(async () => {
-      const response = await axios.post<{ data: Address[] }>(
-        `${BASE_URL}/api/shop/address/add/${userId}`,
-        formData
-      );
-      return response.data.data;
-    }).catch((error) => rejectWithValue(error));
+>("address/addNewAddress", async ({ userId, formData }, { rejectWithValue }) => {
+  try {
+    const response = await axios.post<ApiResponse<Address[]>>(
+      `${BASE_URL}/api/shop/address/add/${userId}`,
+      { ...formData, notes: formData.notes || "" } // Ensure notes is never undefined
+    );
+    return response.data.data;
+  } catch (error: any) {
+    return rejectWithValue(
+      error.response?.data?.message || "Failed to add address"
+    );
   }
-);
+});
 
 export const fetchAllAddress = createAsyncThunk<
   Address[],
   string,
   { rejectValue: string }
->("/address/fetchAllAddress", async (userId, { rejectWithValue }) => {
-  return fetchData(async () => {
-    const response = await axios.get(
+>("address/fetchAllAddress", async (userId, { rejectWithValue }) => {
+  try {
+    const response = await axios.get<ApiResponse<Address[]>>(
       `${BASE_URL}/api/shop/address/get/${userId}`
     );
-
     return response.data.data;
-  }).catch((error) => rejectWithValue(error));
+  } catch (error: any) {
+    return rejectWithValue(
+      error.response?.data?.message || "Failed to fetch addresses"
+    );
+  }
 });
 
 export const editAddress = createAsyncThunk<
   Address[],
   { userId: string; addressId: string; formData: Address },
   { rejectValue: string }
->(
-  "address/editAddress",
-  async ({ userId, addressId, formData }, { rejectWithValue }) => {
-    return fetchData(async () => {
-      const response = await axios.put<{ data: Address[] }>(
-        `${BASE_URL}/api/shop/address/update/${userId}/${addressId}`,
-        formData
-      );
-      return response.data.data;
-    }).catch((error) => rejectWithValue(error));
+>("address/editAddress", async ({ userId, addressId, formData }, { rejectWithValue }) => {
+  try {
+    const response = await axios.put<ApiResponse<Address[]>>(
+      `${BASE_URL}/api/shop/address/update/${userId}/${addressId}`,
+      { ...formData, notes: formData.notes || "" }
+    );
+    return response.data.data;
+  } catch (error: any) {
+    return rejectWithValue(
+      error.response?.data?.message || "Failed to update address"
+    );
   }
-);
+});
 
-export const deleteAddress = createAsyncThunk<Address[],
-{userId: string, addressId: string},
-{ rejectValue: string }>(
-  "/addressess/deleteAddresses",
-  async ({ userId, addressId }, { rejectWithValue }) => {
-    return fetchData(async () => {
-      const response = await axios.delete<{ data: Address[] }>(
-        `${BASE_URL}/api/shop/address/delete/${userId}/${addressId}`
-      );
-  
-      return response.data.data;
-    }).catch((error) => rejectWithValue(error));
+export const deleteAddress = createAsyncThunk<
+  Address[],
+  { userId: string; addressId: string },
+  { rejectValue: string }
+>("address/deleteAddress", async ({ userId, addressId }, { rejectWithValue }) => {
+  try {
+    const response = await axios.delete<ApiResponse<Address[]>>(
+      `${BASE_URL}/api/shop/address/delete/${userId}/${addressId}`
+    );
+    return response.data.data;
+  } catch (error: any) {
+    return rejectWithValue(
+      error.response?.data?.message || "Failed to delete address"
+    );
   }
-);
+});
 
 const addressSlice = createSlice({
   name: "address",
@@ -100,54 +116,27 @@ const addressSlice = createSlice({
   reducers: {},
   extraReducers: (builder) => {
     builder
-      .addCase(addNewAddress.pending, (state) => {
-        state.isLoading = true;
-        state.error = null;
-      })
-      .addCase(addNewAddress.fulfilled, (state, action: PayloadAction<Address[]>) => {
-        state.isLoading = false;
-        state.addressList = action.payload;
-      })
-      .addCase(addNewAddress.rejected, (state, action) => {
-        state.isLoading = false;
-        state.error = action.payload || "Failed to add new address";
-      })
-      .addCase(fetchAllAddress.pending, (state) => {
-        state.isLoading = true;
-        state.error = null;
-      })
-      .addCase(fetchAllAddress.fulfilled, (state, action: PayloadAction<Address[]>) => {
-        state.isLoading = false;
-        state.addressList = action.payload;
-      })
-      .addCase(fetchAllAddress.rejected, (state, action) => {
-        state.isLoading = false;
-        state.error = action.payload || "Failed to fetch addresses.";
-      })
-      .addCase(editAddress.pending, (state) => {
-        state.isLoading = true;
-        state.error = null;
-      })
-      .addCase(editAddress.fulfilled, (state, action: PayloadAction<Address[]>) => {
-        state.isLoading = false;
-        state.addressList = action.payload;
-      })
-      .addCase(editAddress.rejected, (state, action) => {
-        state.isLoading = false;
-        state.error = action.payload || "Failed to edit address.";
-      })
-      .addCase(deleteAddress.pending, (state) => {
-        state.isLoading = true;
-        state.error = null;
-      })
-      .addCase(deleteAddress.fulfilled, (state, action: PayloadAction<Address[]>) => {
-        state.isLoading = false;
-        state.addressList = action.payload;
-      })
-      .addCase(deleteAddress.rejected, (state, action) => {
-        state.isLoading = false;
-        state.error = action.payload || "Failed to delete address.";
-      });
+      .addMatcher(
+        (action) => action.type.endsWith("/pending"),
+        (state) => {
+          state.isLoading = true;
+          state.error = null;
+        }
+      )
+      .addMatcher(
+        (action) => action.type.endsWith("/rejected"),
+        (state, action: PayloadAction<string | undefined>) => {
+          state.isLoading = false;
+          state.error = action.payload || "Request failed";
+        }
+      )
+      .addMatcher(
+        (action) => action.type.endsWith("/fulfilled"),
+        (state, action: PayloadAction<Address[]>) => {
+          state.isLoading = false;
+          state.addressList = action.payload;
+        }
+      );
   },
 });
 

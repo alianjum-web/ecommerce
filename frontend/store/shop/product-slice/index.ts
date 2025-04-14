@@ -1,13 +1,14 @@
 import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
 import axios from "axios";
-import { Product } from "@/utils/productInterface";
+import type  { Product, ProductDetails } from "@/utils/productInterface";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+
 
 interface ProductState {
     isLoading: boolean;
     productList: Product[];
-    productDetails: Product | null;
+    productDetails: ProductDetails | null;
     error: string | null;
 }
 
@@ -44,14 +45,14 @@ export const fetchAllFilteredProducts = createAsyncThunk<
 );
 
 export const fetchProductDetails = createAsyncThunk<
-Product,
-string,
-{ rejectValue: string }
+  ProductDetails, // Changed from Product to ProductDetails
+  string,
+  { rejectValue: string }
 >(
     "/products/fetchProductDetails",
     async (id, { rejectWithValue }) => {
         return fetchData(async() => {
-            const response = await axios.get<{ data: Product }>(
+            const response = await axios.get<{ data: ProductDetails }>( // Changed to ProductDetails
                 `${BASE_URL}/api/shop/products/get/${id}`
             );
     
@@ -87,7 +88,7 @@ const shoppingProductSlice = createSlice({
                 state.isLoading = true;
                 state.error = null;
             })
-            .addCase(fetchProductDetails.fulfilled, (state, action: PayloadAction<Product>) => {
+            .addCase(fetchProductDetails.fulfilled, (state, action: PayloadAction<ProductDetails>) => {
                 state.isLoading = false;
                 state.productDetails = action.payload;
             })
