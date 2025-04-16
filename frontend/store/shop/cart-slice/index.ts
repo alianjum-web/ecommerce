@@ -53,39 +53,54 @@ const fetchData = async <T>(callback: () => Promise<T>): Promise<T> => {
   }
 };
 
+// cart-slice.ts
 export const addToCart = createAsyncThunk<
   CartItem[],
-  { userId: string; productId: string; quantity: number },
-  { rejectValue: string }
+  { userId?: string; productId: string; quantity: number },
+  { rejectValue: string; state: RootState }
 >(
-  "/cart/addToCart",
-  async ({ userId, productId, quantity }, { rejectWithValue }) => {
-    return fetchData(async () => {
+  "cart/addToCart",
+  async ({ productId, quantity }, { getState, rejectWithValue }) => {
+    const { auth } = getState();
+    if (!auth.user?._id) {
+      return rejectWithValue("User not authenticated");
+    }
+
+    try {
       const response = await axios.post<{ data: CartItem[] }>(
         `${BASE_URL}/api/shop/cart/add`,
         {
-          userId,
+          userId: auth.user._id,
           productId,
           quantity,
         }
       );
-
       return response.data.data;
-    }).catch((error) => rejectWithValue(error));
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || "Failed to add to cart");
+    }
   }
 );
 
+// Similar updates for other cart actions
 export const fetchCartItems = createAsyncThunk<
   CartItem[],
-  string,
-  { rejectValue: string }
->("cart/fetchCartItems", async (userId, { rejectWithValue }) => {
-  return fetchData(async () => {
+  void,
+  { rejectValue: string; state: RootState }
+>("cart/fetchCartItems", async (_, { getState, rejectWithValue }) => {
+  const { auth } = getState();
+  if (!auth.user?._id) {
+    return []; // Return empty array instead of rejecting
+  }
+
+  try {
     const response = await axios.get<{ data: CartItem[] }>(
-      `${BASE_URL}/api/shop/cart/get/${userId}`
+      `${BASE_URL}/api/shop/cart/get/${auth.user._id}`
     );
     return response.data.data;
-  }).catch((error) => rejectWithValue(error));
+  } catch (error: any) {
+    return rejectWithValue(error.message);
+  }
 });
 
 export const deleteCartItem = createAsyncThunk<

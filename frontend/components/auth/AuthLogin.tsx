@@ -19,16 +19,18 @@ import { toast } from "@/components/ui/sonner"
 import { useState } from "react"
 import { useAppDispatch } from "@/store/hooks"
 import { loginUser } from "@/store/auth-slice"
+// Define the AuthLoginProps type
+import { UserRole } from '@/utils/auth';
 
 const formSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
 })
 
-// Define the AuthLoginProps type
+
 type AuthLoginProps = {
   redirect?: string;
-  requiredRole?: string;
+  requiredRole?: UserRole;
 };
 
 export default function AuthLogin({ redirect = "/shopping/home", requiredRole }: AuthLoginProps) {
@@ -46,28 +48,34 @@ export default function AuthLogin({ redirect = "/shopping/home", requiredRole }:
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
-      setIsLoading(true)
-      const resultAction = await dispatch(loginUser(values))
+      setIsLoading(true);
+      const resultAction = await dispatch(loginUser(values));
       
       if (loginUser.fulfilled.match(resultAction)) {
-        if (requiredRole && (resultAction.payload as { user?: { role: string } }).user?.role !== requiredRole) {
-          router.push(`/app/unauth-page?returnUrl=${encodeURIComponent(redirect)}`)
-          return
+        const userData = resultAction.payload as { user?: { role: string } };
+        
+        if (requiredRole && userData.user?.role !== requiredRole) {
+          router.push(`/app/unauth-page?returnUrl=${encodeURIComponent(redirect)}`);
+          return;
         }
         
-        // Ensure redirect URL starts with /app
-        const finalRedirect = redirect.startsWith('/app') ? redirect : `/app${redirect}`
-        router.push(finalRedirect)
-        router.refresh()
-        toast.success("Login successful")
+        // Handle redirect more safely
+        let finalRedirect = redirect;
+        if (!redirect.startsWith('/app')) {
+          finalRedirect = `/app${redirect.startsWith('/') ? redirect : `/${redirect}`}`;
+        }
+        
+        router.push(finalRedirect);
+        router.refresh();
+        toast.success("Login successful");
       } else {
-        throw new Error(resultAction.payload || "Login failed")
+        throw new Error(typeof resultAction.payload === 'string' ? resultAction.payload : "Login failed");
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Login failed")
       console.error("Login error:", error)
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
   }
 

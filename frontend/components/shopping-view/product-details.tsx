@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useAppSelector, useAppDispatch } from "@/store/hooks";
 import { addToCart, fetchCartItems } from "@/store/shop/cart-slice";
-import { setProductDetails } from "@/store/shop/product-slice";
+import { resetProductDetails } from "@/store/shop/product-slice";
 import { addReview, getReviews } from "@/store/shop/review-slice";
 import { RootState } from "@/store/store";
 import type { Product } from "@/utils/productInterface";
@@ -88,7 +88,7 @@ function ProductDetailsDialog({
 
   function handleDialogClose() {
     setOpen(false);
-    dispatch(setProductDetails());
+    dispatch(resetProductDetails());
     setRating(0);
     setReviewMsg("");
   }

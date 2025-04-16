@@ -1,54 +1,90 @@
-// middleware.ts
-import { NextResponse } from "next/server"
-import type { NextRequest } from "next/server"
+import { NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 
-const adminRoutes = ["/admin"]
-const authRoutes = ["/shopping/account", "/shopping/checkout"]
-const publicRoutes = ["/", "/shopping", "/shopping/listing", "/shopping/search"]
+const publicRoutes = [
+  "/shopping/home",
+  "/shopping/listing",
+  "/shopping/search",
+];
 
-// middleware.ts
+const protectedRoutes = [
+  { path: "/shopping/account", roles: ["buyer", "seller", "admin"] },
+  { path: "/shopping/checkout", roles: ["buyer", "seller", "admin"] },
+  { path: "/shopping/payment-auccess", roles: ["buyer", "seller", "admin"] },
+  { path: "/shopping/payment-return", roles: ["buyer", "seller", "admin"] },
+  { path: "/admin", roles: ["seller", "admin"] },
+];
+
 export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl
-  // Remove the basePath from the pathname before checking
-  const cleanPathname = pathname.replace(/^\/app/, '')
-  const token = request.cookies.get('token')?.value
+  const { pathname } = request.nextUrl;
+  const token = request.cookies.get("token")?.value;
 
   // Skip API routes and static files
-  if (pathname.startsWith('/api') || 
-      pathname.startsWith('/_next') || 
-      pathname.includes('.')) {
-    return NextResponse.next()
+  if (
+    pathname.startsWith("/api") ||
+    pathname.startsWith("/_next") ||
+    pathname.includes(".")
+  ) {
+    return NextResponse.next();
   }
 
-  // Handle auth routes - use cleanPathname for checks
-  if (authRoutes.some(route => cleanPathname.startsWith(route)) && !token) {
-    const loginUrl = new URL('/app/auth/login', request.url)
-    loginUrl.searchParams.set('redirect', cleanPathname)
-    return NextResponse.redirect(loginUrl)
+  // Handle root path redirect
+  // if (pathname === '/' || pathname === '/app') {
+  //   return NextResponse.redirect(new URL('/app/shopping/home', request.url))
+  // }
+
+  if (pathname === "/") {
+    return NextResponse.redirect(new URL("/shopping/home", request.url));
   }
-  
-  // Handle admin routes
-  if (adminRoutes.some(route => pathname.startsWith(route))) {
-    if (!token) {
-      return NextResponse.redirect(new URL('/auth/login', request.url))
-    }
-    
-    // Verify user role (you might need to call your API here)
-    const userResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/check-auth`, {
-      headers: {
-        Cookie: `token=${token}`
+
+  // Remove basePath for matching
+  // const cleanPath = pathname.replace(/^\/app/, '');
+  const cleanPath = pathname;
+  //check if the route is public
+  const isPublic = publicRoutes.some((route) => cleanPath.startsWith(route));
+
+  if (!isPublic) {
+    const routeConfig = protectedRoutes.find((route) =>
+      cleanPath.startsWith(route.path)
+    );
+
+    if (routeConfig) {
+      if (!token) {
+        const unauthUrl = new URL("/unauth-page", request.url);
+        return NextResponse.redirect(unauthUrl);
       }
-    })
-    
-    if (!userResponse.ok) {
-      return NextResponse.redirect(new URL('/auth/login', request.url))
-    }
-    
-    const userData = await userResponse.json()
-    if (!["admin", "seller"].includes(userData.user?.role)) {
-      return NextResponse.redirect(new URL('/unauth-page', request.url))
+
+      try {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/auth/check-auth`,
+          {
+            headers: {
+              Cookie: `token=${token}`,
+            },
+          }
+        );
+
+        if (!response.ok) throw new Error("Unauthorized");
+
+        const userData = await response.json();
+
+        if (!routeConfig.roles.includes(userData.user?.role)) {
+          return NextResponse.redirect(
+            new URL("/app/unauth-page", request.url)
+          );
+        }
+      } catch (error) {
+        const unauthUrl = new URL("/app/unauth-page", request.url);
+        unauthUrl.searchParams.set("returnUrl", cleanPath);
+        return NextResponse.redirect(unauthUrl);
+      }
     }
   }
 
-  return NextResponse.next()
+  // Handle not-found routes
+  if (!isPublic && !protectedRoutes.some((r) => cleanPath.startsWith(r.path))) {
+    return NextResponse.redirect(new URL("/app/not-found", request.url));
+  }
+
+  return NextResponse.next();
 }

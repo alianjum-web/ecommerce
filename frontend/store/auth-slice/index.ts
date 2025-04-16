@@ -1,9 +1,10 @@
 // authSlice.ts
-import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { createAsyncThunk, createSlice, PayloadAction, isRejectedWithValue } from "@reduxjs/toolkit";
 import axios from "axios";
 import type { User } from "@/utils/types";
 import type { RegisterFormData, LoginFormData } from "@/utils/auth";
 import { persistConfig } from "../store";
+import type { RootState } from "../store";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
@@ -24,11 +25,11 @@ const initialState: AuthState = {
 };
 
 // Improved apiCall helper with better error handling
-const apiCall = async <T>(url: string, method: string, data?: any) => {
+const apiCall = async <T>(url: string, method: string, data?: any): Promise<T> => {
   try {
     const response = await axios({
       method,
-      url: `${BASE_URL}${url}`, // Removed duplicate /api/auth prefix
+      url: `${BASE_URL}${url}`,
       data,
       withCredentials: true,
       headers: {
@@ -45,7 +46,12 @@ const apiCall = async <T>(url: string, method: string, data?: any) => {
   }
 };
 
-export const registerUser = createAsyncThunk<User, RegisterFormData, { rejectValue: string }>(
+type ThunkApiConfig = {
+  state: RootState;
+  rejectValue: string;
+}
+
+export const registerUser = createAsyncThunk<User, RegisterFormData, ThunkApiConfig>(
   "auth/register",
   async (formData, { rejectWithValue }) => {
     try {
@@ -58,7 +64,7 @@ export const registerUser = createAsyncThunk<User, RegisterFormData, { rejectVal
   }
 );
 
-export const loginUser = createAsyncThunk<User, LoginFormData, { rejectValue: string }>(
+export const loginUser = createAsyncThunk<User, LoginFormData, ThunkApiConfig>(
   "auth/login",
   async (formData, { rejectWithValue }) => {
     try {
@@ -71,38 +77,37 @@ export const loginUser = createAsyncThunk<User, LoginFormData, { rejectValue: st
   }
 );
 
-export const logoutUser = createAsyncThunk<void, void, { rejectValue: string }>(
+export const logoutUser = createAsyncThunk<void, void, ThunkApiConfig>(
   "auth/logout",
   async (_, { rejectWithValue }) => {
     try {
       await apiCall("/api/auth/logout", "POST");
-      return undefined; // Explicitly return undefined
+      return; // Explicitly return undefined on success
     } catch (error: any) {
       return rejectWithValue(error.message);
     }
   }
 );
 
-export const checkAuth = createAsyncThunk<User, void, { rejectValue: string }>(
+export const checkAuth = createAsyncThunk<User, void, ThunkApiConfig>(
   "auth/checkAuth",
   async (_, { rejectWithValue }) => {
     try {
       const response = await axios.get<{ user: User }>(`${BASE_URL}/api/auth/check-auth`, {
         withCredentials: true
-      })
+      });
       
       if (!response.data.user) {
-        // Clear invalid persisted data
-        localStorage.removeItem(`persist:${persistConfig.key}`)
-        throw new Error('Session expired')
+        localStorage.removeItem(`persist:${persistConfig.key}`);
+        throw new Error('Session expired');
       }
       
-      return response.data.user
+      return response.data.user;
     } catch (error: any) {
-      return rejectWithValue(error.message)
+      return rejectWithValue(error.message || 'Failed to check authentication');
     }
   }
-)
+);
 
 const authSlice = createSlice({
   name: "auth",
@@ -112,7 +117,7 @@ const authSlice = createSlice({
       state.user = null;
       state.isAuthenticated = false;
       state.error = null;
-      state.isInitialized = true; // Ensure we mark as initialized even on reset
+      state.isInitialized = true;
     },
   },
   extraReducers: (builder) => {
@@ -136,6 +141,10 @@ const authSlice = createSlice({
       })
       
       // Check Auth
+      .addCase(checkAuth.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
       .addCase(checkAuth.fulfilled, (state, action: PayloadAction<User>) => {
         state.isLoading = false;
         state.user = action.payload;
@@ -143,11 +152,12 @@ const authSlice = createSlice({
         state.isInitialized = true;
         state.error = null;
       })
-      .addCase(checkAuth.rejected, (state) => {
+      .addCase(checkAuth.rejected, (state, action) => {
         state.isLoading = false;
-        state.isInitialized = true;
         state.isAuthenticated = false;
         state.user = null;
+        state.isInitialized = true;
+        state.error = action.payload || 'Authentication check failed';
       })
       
       // Logout User
@@ -161,10 +171,9 @@ const authSlice = createSlice({
       .addCase(logoutUser.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload || "Logout failed";
-      });
+      })
 
-    // Generic matchers
-    builder
+      // Generic matchers
       .addMatcher(
         (action) => action.type.endsWith('/pending'),
         (state) => {
@@ -173,13 +182,12 @@ const authSlice = createSlice({
         }
       )
       .addMatcher(
-        (action) => action.type.endsWith('/rejected'),
-        (state, action: PayloadAction<string | undefined>) => {
+        isRejectedWithValue,
+        (state, action) => {
+          const payloadAction = action as PayloadAction<string | undefined>;
           state.isLoading = false;
-          state.error = action.payload || "Request failed";
-          // If any auth request fails, consider user not authenticated
-          // Except for logout which might fail but we still want to clear auth
-          if (!action.type.includes('logout')) {
+          state.error = payloadAction.payload || "Request failed";
+          if (!payloadAction.type.includes('logout')) {
             state.isAuthenticated = false;
             state.user = null;
           }

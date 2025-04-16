@@ -1,16 +1,28 @@
-// app/providers.tsx
-'use client'
+// app/layout.tsx
+import type { Metadata } from "next"
+import { Inter } from "next/font/google"
+import "./globals.css"
+import { Providers } from "./providers"
 
-import { PersistGate } from 'redux-persist/integration/react'
-import { store, persistor } from '@/store/store'
-import { Provider } from 'react-redux'
+const inter = Inter({ subsets: ["latin"] })
 
-export function Providers({ children }: { children: React.ReactNode }) {
+export const metadata: Metadata = {
+  title: "Ecommerce",
+  description: "Your ecommerce platform",
+}
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
   return (
-    <Provider store={store}>
-      <PersistGate loading={null} persistor={persistor}>
-        {children}
-      </PersistGate>
-    </Provider>
+    <html lang="en">
+      <body className={inter.className}>
+        <Providers>
+          {children}
+        </Providers>
+      </body>
+    </html>
   )
 }

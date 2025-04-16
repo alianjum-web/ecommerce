@@ -1,4 +1,4 @@
-// components/ErrorBoundary.tsx
+// components/Navigation.tsx
 'use client'
 
 import Link from 'next/link'
@@ -14,16 +14,18 @@ export default function Navigation() {
   const { user, isAuthenticated } = useAppSelector((state) => state.auth)
   const dispatch = useAppDispatch()
 
+  // Helper function to determine if a path is active
+  const isActive = (path: string) => {
+    return pathname === path
+  }
+
   const handleLogout = async () => {
     try {
       await dispatch(logoutUser()).unwrap()
-      toast.success('Logged out',{
-        description: 'You have been successfully logged out',
-      })
+      toast.success('Logged out successfully')
+      window.location.href = '/app/auth/login' // Full reload to clear state
     } catch {
-      toast.error('Error',{
-        description: 'Failed to log out',
-      })
+      toast.error('Failed to log out')
     }
   }
 
@@ -31,9 +33,9 @@ export default function Navigation() {
     <nav className="flex items-center justify-between p-4 bg-white shadow-sm">
       <div className="flex items-center space-x-6">
         <Link 
-          href="/shopping/home" 
+          href="/app/shopping/home" 
           className={`text-sm font-medium transition-colors hover:text-primary ${
-            pathname === '/shopping/home' ? 'text-black' : 'text-muted-foreground'
+            isActive('/app/shopping/home') ? 'text-black' : 'text-muted-foreground'
           }`}
         >
           Home
@@ -41,9 +43,9 @@ export default function Navigation() {
         
         {isAuthenticated && (
           <Link
-            href="/shopping/account"
+            href="/app/shopping/account"
             className={`text-sm font-medium transition-colors hover:text-primary ${
-              pathname.startsWith('/shopping/account') ? 'text-black' : 'text-muted-foreground'
+              isActive('/app/shopping/account') ? 'text-black' : 'text-muted-foreground'
             }`}
           >
             My Account
@@ -56,9 +58,9 @@ export default function Navigation() {
           <>
             {user && ['admin', 'seller'].includes(user.role) && (
               <Link
-                href="/admin/dashboard"
+                href="/app/admin/dashboard"
                 className={`text-sm font-medium transition-colors hover:text-primary ${
-                  pathname.startsWith('/admin') ? 'text-black' : 'text-muted-foreground'
+                  isActive('/app/admin/dashboard') ? 'text-black' : 'text-muted-foreground'
                 }`}
               >
                 Admin Dashboard
@@ -73,13 +75,13 @@ export default function Navigation() {
             </Button>
           </>
         ) : (
-          <Link href="/auth/login">
+          <Link href="/app/auth/login">
             <Button variant="default" size="sm">
               Login
             </Button>
           </Link>
         )}
-    </div>
+      </div>
     </nav>
   )
 }

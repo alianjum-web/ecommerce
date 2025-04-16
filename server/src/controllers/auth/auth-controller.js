@@ -176,4 +176,5 @@ const authMiddleware = async (req, res, next) => {
   }
 };
 
+
 export { registerUser, loginUser, logoutUser, authMiddleware };

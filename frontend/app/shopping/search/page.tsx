@@ -1,19 +1,44 @@
-import { Suspense } from "react";
+// app/shopping/search/page.tsx
+'use client' // Add this directive since you're using client-side hooks
+
+import { ProductSearchResult } from "@/store/shop/search-slice";
 import SearchClient from "./SearchClient";
 import { getInitialSearchResults } from "@/lib/search";
 import ErrorBoundary from "./hooks/errorDeboundry";
+import { useSearchParams } from "next/navigation";
+import { useState, useEffect } from "react";
 
-export const metadata = {
-  title: "Search",
-};
 
-export default async function SearchPage({
-  searchParams,
-}: {
-  searchParams: { keyword?: string };
-}) {
-  const keyword = searchParams.keyword || "";
-  const initialResults = keyword ? await getInitialSearchResults(keyword) : [];
+export default function SearchPage() {
+  const searchParams = useSearchParams();
+  const keyword = searchParams.get('keyword') || '';
+  const [initialResults, setInitialResults] = useState<ProductSearchResult[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchResults = async () => {
+      if (keyword) {
+        setIsLoading(true);
+        try {
+          const results = await getInitialSearchResults(keyword);
+          setInitialResults(results);
+        } catch (error) {
+          console.error("Search failed:", error);
+        } finally {
+          setIsLoading(false);
+        }
+      } else {
+        setInitialResults([]);
+        setIsLoading(false);
+      }
+    };
+
+    fetchResults();
+  }, [keyword]);
+
+  if (isLoading) {
+    return <SearchLoading />;
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -24,12 +49,10 @@ export default async function SearchPage({
           </div>
         }
       >
-        <Suspense fallback={<SearchLoading />}>
-          <SearchClient 
-            initialResults={initialResults} 
-            searchTitle={keyword ? `Search: ${keyword}` : "Search"}
-          />
-        </Suspense>
+        <SearchClient 
+          initialResults={initialResults} 
+          searchTitle={keyword ? `Search: ${keyword}` : "Search"}
+        />
       </ErrorBoundary>
     </div>
   );

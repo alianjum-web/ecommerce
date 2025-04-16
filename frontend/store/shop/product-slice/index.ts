@@ -29,14 +29,7 @@ interface ApiError {
   };
 }
 
-const fetchData = async <T>(callback: () => Promise<T>): Promise<T> => {
-  try {
-    return await callback();
-  } catch (error: unknown) {
-    const err = error as ApiError;
-    throw err.response?.data?.message || "Something went wrong!";
-  }
-};
+
 
 export const fetchAllFilteredProducts = createAsyncThunk<
   Product[],

@@ -1,72 +1,78 @@
-// store/store.ts
-import { configureStore, combineReducers } from "@reduxjs/toolkit";
-import {
-  persistStore,
-  persistReducer,
-  FLUSH,
-  REHYDRATE,
-  PAUSE,
-  PERSIST,
-  PURGE,
-  REGISTER,
-} from "redux-persist";
-import createWebStorage from "redux-persist/lib/storage/createWebStorage";
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
 
-// Import all your reducers...
+const publicRoutes = [
+  '/shopping/home',
+  '/shopping/listing',
+  '/shopping/search'
+]
 
-// Enhanced no-op storage for server-side
-const createNoopStorage = () => {
-  return {
-    getItem(_key: string): Promise<null> {
-      return Promise.resolve(null);
-    },
-    setItem(_key: string, value: unknown): Promise<unknown> {
-      return Promise.resolve(value);
-    },
-    removeItem(_key: string): Promise<void> {
-      return Promise.resolve();
-    },
-  };
-};
+const protectedRoutes = [
+  { path: '/shopping/account', roles: ['buyer', 'seller', 'admin'] },
+  { path: '/shopping/checkout', roles: ['buyer'] },
+  { path: '/shopping/payment-success', roles: ['buyer'] },
+  { path: '/shopping/payment-return', roles: ['buyer'] },
+  { path: '/admin', roles: ['admin', 'seller'] }
+]
 
-const storage = typeof window !== "undefined" ? 
-  createWebStorage("local") : 
-  createNoopStorage();
+export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl
+  const token = request.cookies.get('token')?.value
 
-const rootReducer = combineReducers({
-  // Your reducers...
-});
+  // Skip API routes and static files
+  if (pathname.startsWith('/api') || 
+      pathname.startsWith('/_next') || 
+      pathname.includes('.')) {
+    return NextResponse.next()
+  }
 
-const persistConfig = {
-  key: "root",
-  storage,
-  whitelist: ["auth", "shopCart", "shopAddress"],
-  version: 1,
-  // Optional: Add state reconciler if you need migration
-  migrate: (state: any) => {
-    if (!state) {
-      return Promise.resolve(undefined);
+  // Handle root path redirect
+  if (pathname === '/' || pathname === '/app') {
+    return NextResponse.redirect(new URL('/app/shopping/home', request.url))
+  }
+
+  // Remove basePath for matching
+  const cleanPath = pathname.replace(/^\/app/, '')
+
+  // Check if route is public
+  const isPublic = publicRoutes.some(route => cleanPath.startsWith(route))
+
+  if (!isPublic) {
+    const routeConfig = protectedRoutes.find(route => cleanPath.startsWith(route.path))
+
+    if (routeConfig) {
+      if (!token) {
+        const unauthUrl = new URL('/app/unauth-page', request.url)
+        unauthUrl.searchParams.set('returnUrl', cleanPath)
+        return NextResponse.redirect(unauthUrl)
+      }
+
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/check-auth`, {
+          headers: {
+            Cookie: `token=${token}`
+          }
+        })
+
+        if (!response.ok) throw new Error('Unauthorized')
+
+        const userData = await response.json()
+        
+        if (!routeConfig.roles.includes(userData.user?.role)) {
+          return NextResponse.redirect(new URL('/app/unauth-page', request.url))
+        }
+      } catch (error) {
+        const unauthUrl = new URL('/app/unauth-page', request.url)
+        unauthUrl.searchParams.set('returnUrl', cleanPath)
+        return NextResponse.redirect(unauthUrl)
+      }
     }
-    return Promise.resolve(state);
-  },
-};
+  }
 
-const persistedReducer = persistReducer(persistConfig, rootReducer);
+  // Handle not found routes
+  if (!isPublic && !protectedRoutes.some(r => cleanPath.startsWith(r.path))) {
+    return NextResponse.redirect(new URL('/app/not-found', request.url))
+  }
 
-export const store = configureStore({
-  reducer: persistedReducer,
-  middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware({
-      serializableCheck: {
-        ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
-        ignoredPaths: ['some.nested.path'], // Add if needed
-      },
-    }),
-  devTools: process.env.NODE_ENV !== "production",
-});
-
-export const persistor = persistStore(store);
-
-// Infer the RootState and AppDispatch types from the store itself
-export type RootState = ReturnType<typeof store.getState>;
-export type AppDispatch = typeof store.dispatch;
+  return NextResponse.next()
+}

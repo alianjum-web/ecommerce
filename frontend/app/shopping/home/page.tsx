@@ -19,6 +19,7 @@ import {
   WatchIcon,
 } from "lucide-react";
 
+import { store } from "@/store/store";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "@/components/ui/sonner";
@@ -78,7 +79,7 @@ export default function ShoppingHome() {
   );
 
   const { featureImageList } = useAppSelector((state) => state.commonFeature);
-  const { user } = useAppSelector((state) => state.auth);
+  // const { user } = useAppSelector((state) => state.auth);
   
   // Component state
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -112,39 +113,35 @@ export default function ShoppingHome() {
   );
 
 // Add these improvements from first version:
-const [isAddingToCart, setIsAddingToCart] = useState(false);
-
-// Enhanced handleAddToCart:
+// ShoppingHome.tsx
 const handleAddToCart = useCallback(async (productId: string) => {
+  const state = store.getState();
+  const { user } = state.auth;
+  
   if (!user?._id) {
-    toast.error("Rejected", {
-      description: "Please login to add items to cart",
-    });
-    router.push(`/auth/login?redirect=${encodeURIComponent(window.location.pathname)}`);
+    toast.error("Please login to add items to cart");
+    router.push(`/app/auth/login?redirect=${encodeURIComponent(window.location.pathname)}`);
     return;
   }
 
-  setIsAddingToCart(true);
   try {
     await dispatch(addToCart({
       userId: user._id,
       productId,
       quantity: 1,
     })).unwrap();
-
-    await dispatch(fetchCartItems(user._id));
+    
+    // Only fetch cart items if user is authenticated
+    if (user._id) {
+      await dispatch(fetchCartItems()).unwrap();
+    }
+    
     toast.success("Product added to cart");
   } catch (error) {
-    logger.error("Failed to add to cart:", error);
-    toast.error("Error", {
-      description: "Failed to add item to cart",
-    });
-  } finally {
-    setIsAddingToCart(false);
+    toast.error("Failed to add item to cart");
   }
-}, [dispatch, user, router]);
+}, [dispatch, router]);
 
-// Pass isAddingToCart to ShoppingProductTile
 
   const nextSlide = useCallback(() => {
     setCurrentSlide((prev) => (prev + 1) % (featureImageList?.length || 1));
@@ -236,12 +233,12 @@ const handleAddToCart = useCallback(async (productId: string) => {
             product={product}
             onViewDetails={handleGetProductDetails}
             onAddToCart={handleAddToCart}
-            isAddingToCart={isAddingToCart}
+            // isAddingToCart={isAddingToCart}
           />
         ))}
       </div>
     );
-  }, [productList, isLoading, error, isInitialLoad, handleGetProductDetails, handleAddToCart, isAddingToCart]);
+  }, [productList, isLoading, error, isInitialLoad, handleGetProductDetails, handleAddToCart]);
 
   if (isInitialLoad && isLoading) {
     return (
