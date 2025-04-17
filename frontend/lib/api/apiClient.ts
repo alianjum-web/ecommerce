@@ -1,58 +1,138 @@
-// lib/api/apiClient.ts
-import axios, { AxiosError } from 'axios'
-import { cookies } from 'next/headers'
-import { AuthError } from '@/lib/errors/auth-error'
-import { useAppSelector } from '@/store/hooks'
+import axios, {
+  Axios,
+  AxiosError,
+  AxiosInstance,
+  AxiosRequestConfig,
+} from "axios";
+import { cookies } from "next/headers";
+import { AuthError } from "../errors/auth-error";
+import { useAppSelector } from "@/store/hooks";
+import { config } from "process";
+import { error } from "console";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
-export const apiClient = axios.create({
+const PUBLIC_ROUTES = [
+  "/shopping/home",
+  "/shopping/listing",
+  "/shopping/search",
+  "/auth/login",
+  "/auth/register",
+  "/unauth-page",
+  "/not-found",
+];
+
+// Base API client configuration
+const baseConfig: AxiosRequestConfig = {
   baseURL: BASE_URL,
-  withCredentials: true
-})
+  withCredentials: true,
+  timeout: 10000,
+  headers: {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  },
+};
 
-// Server-side API client
-export async function serverApiClient() {
-  const cookieStore = cookies()
-  const resolvedCookies = await cookieStore;
-  const token = resolvedCookies.get('token')?.value;
+// Create base API client
+export const apiClient: AxiosInstance = axios.create(baseConfig);
+
+apiClient.interceptors.request.use(async (config) => {
+  // Skip auth headers for public routes
+  const isPublicRoute = PUBLIC_ROUTES.some((route) =>
+    config.url?.startsWith(route)
+  );
+
+  if (isPublicRoute) {
+    return config;
+  }
+
+  // Add auth headers for protected routes
+  if (typeof window !== "undefined") {
+    // Client-side auth handling
+    const token = localStorage.getItem("token");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+  }
+  return config;
+});
+
+// response interseptor for  API client
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error: AxiosError) => {
+    if (error.response?.status === 401) {
+      throw new AuthError(
+        "Unauthorized",
+        typeof window !== "undefined" ? window.location.pathname : "/"
+      );
+    }
+    return Promise.reject(error);
+  }
+);
+
+// Server Side Api client
+export async function serverApiClient(): Promise<AxiosInstance> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("token")?.value;
 
   const instance = axios.create({
-    baseURL: BASE_URL,
+    ...baseConfig,
     headers: {
-      'Content-Type': 'application/json',
-      ...(token && { Cookie: `token=${token}` })
-    }
-  })
+      ...baseConfig.headers,
+      ...(token && {
+        Authorization: `Bearer ${token}`,
+      }),
+    },
+  });
 
   instance.interceptors.response.use(
     (response) => response,
     (error: AxiosError) => {
       if (error.response?.status === 401) {
-        throw new AuthError('Unauthorized', window.location.pathname)
+        throw new AuthError("Unauthorized", "/");
       }
-      return Promise.reject(error)
+      return Promise.reject(error);
     }
-  )
+  );
 
-  return instance
+  return instance;
 }
 
-// Client-side API hooks
-export function useApiClient() {
-  const { user } = useAppSelector((state) => state.auth) as { user: { token?: string } }
+// Client-side API hook
+export function useApiClient(): AxiosInstance {
+  const { user } = useAppSelector((state) => state.auth);
 
-  const client = axios.create({
-    baseURL: BASE_URL,
-    withCredentials: true
-  })
+  const client = axios.create(baseConfig);
 
   client.interceptors.request.use((config) => {
-    if (user?.token) {
-      config.headers.Authorization = `Bearer ${user.token}`
+    // Skip auth headers for public routes
+    const isPublicRoute = PUBLIC_ROUTES.some((route) =>
+      config.url?.startsWith(route)
+    );
+    if (!isPublicRoute && user?.token) {
+      config.headers.Authorization = `Bearer ${user.token}`;
     }
-    return config
-  })
+    return config;
+  });
 
-  return client
+  client.interceptors.response.use(
+    (response) => response,
+    (error: AxiosError) => {
+      if (error.response?.status === 401) {
+        throw new AuthError(
+          "Unauthorized",
+          typeof window !== "undefined" ? window.location.pathname : "/"
+        );
+      }
+      return Promise.reject(error);
+    }
+  );
+  return client;
+}
+
+
+// Utility function for the public API calls
+export function publicApiClient(): AxiosInstance {
+  return axios.create(baseConfig);
 }
