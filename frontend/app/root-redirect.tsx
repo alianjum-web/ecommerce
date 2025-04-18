@@ -1,3 +1,4 @@
+// app/root-redirect.tsx
 'use client'
 
 import { useEffect } from 'react'
@@ -7,7 +8,6 @@ export default function RootRedirect() {
   const router = useRouter()
   
   useEffect(() => {
-    // This is just a fallback in case middleware doesn't catch it
     router.replace('/shopping/home')
   }, [router])
 

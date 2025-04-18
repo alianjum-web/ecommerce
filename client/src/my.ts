@@ -1,78 +1,136 @@
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
+import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from "axios";
+import { cookies } from "next/headers";
+import { AuthError } from "@/lib/errors/auth-error";
+import { useAppSelector } from "@/store/hooks";
 
-const publicRoutes = [
-  '/shopping/home',
-  '/shopping/listing',
-  '/shopping/search'
-]
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
-const protectedRoutes = [
-  { path: '/shopping/account', roles: ['buyer', 'seller', 'admin'] },
-  { path: '/shopping/checkout', roles: ['buyer'] },
-  { path: '/shopping/payment-success', roles: ['buyer'] },
-  { path: '/shopping/payment-return', roles: ['buyer'] },
-  { path: '/admin', roles: ['admin', 'seller'] }
-]
+// Define public routes that don't require authentication
+const PUBLIC_ROUTES = [
+  "/shopping/home",
+  "/shopping/listing",
+  "/shopping/search",
+  "/auth/login",
+  "/auth/register",
+  "/unauth-page",
+  "/not-found"
+];
 
-export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl
-  const token = request.cookies.get('token')?.value
+// Base API client configuration
+const baseConfig: AxiosRequestConfig = {
+  baseURL: BASE_URL,
+  withCredentials: true,
+  timeout: 10000, // 10 seconds timeout
+  headers: {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  },
+};
 
-  // Skip API routes and static files
-  if (pathname.startsWith('/api') || 
-      pathname.startsWith('/_next') || 
-      pathname.includes('.')) {
-    return NextResponse.next()
-  }
+// Create base API client
+export const apiClient: AxiosInstance = axios.create(baseConfig);
 
-  // Handle root path redirect
-  if (pathname === '/' || pathname === '/app') {
-    return NextResponse.redirect(new URL('/app/shopping/home', request.url))
-  }
+// Request interceptor for API client
+apiClient.interceptors.request.use(
+  async (config) => {
+    // Skip auth headers for public routes
+    const isPublicRoute = PUBLIC_ROUTES.some(
+      (route) => config.url?.startsWith(route)
+    );
 
-  // Remove basePath for matching
-  const cleanPath = pathname.replace(/^\/app/, '')
+    if (isPublicRoute) {
+      return config;
+    }
 
-  // Check if route is public
-  const isPublic = publicRoutes.some(route => cleanPath.startsWith(route))
-
-  if (!isPublic) {
-    const routeConfig = protectedRoutes.find(route => cleanPath.startsWith(route.path))
-
-    if (routeConfig) {
-      if (!token) {
-        const unauthUrl = new URL('/app/unauth-page', request.url)
-        unauthUrl.searchParams.set('returnUrl', cleanPath)
-        return NextResponse.redirect(unauthUrl)
-      }
-
-      try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/check-auth`, {
-          headers: {
-            Cookie: `token=${token}`
-          }
-        })
-
-        if (!response.ok) throw new Error('Unauthorized')
-
-        const userData = await response.json()
-        
-        if (!routeConfig.roles.includes(userData.user?.role)) {
-          return NextResponse.redirect(new URL('/app/unauth-page', request.url))
-        }
-      } catch (error) {
-        const unauthUrl = new URL('/app/unauth-page', request.url)
-        unauthUrl.searchParams.set('returnUrl', cleanPath)
-        return NextResponse.redirect(unauthUrl)
+    // Add auth headers for protected routes
+    if (typeof window !== "undefined") {
+      // Client-side auth handling
+      const token = localStorage.getItem('token');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
       }
     }
+    return config;
   }
+);
 
-  // Handle not found routes
-  if (!isPublic && !protectedRoutes.some(r => cleanPath.startsWith(r.path))) {
-    return NextResponse.redirect(new URL('/app/not-found', request.url))
+// Response interceptor for API client
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error: AxiosError) => {
+    if (error.response?.status === 401) {
+      throw new AuthError(
+        "Unauthorized",
+        typeof window !== "undefined" ? window.location.pathname : "/"
+      );
+    }
+    return Promise.reject(error);
   }
+);
 
-  return NextResponse.next()
+// Server-side API client
+export async function serverApiClient(): Promise<AxiosInstance> {
+  const cookieStore = await cookies(); // Await the promise to resolve
+  const token = cookieStore.get("token")?.value;
+
+  const instance = axios.create({
+    ...baseConfig,
+    headers: {
+      ...baseConfig.headers,
+      ...(token && {
+        Authorization: `Bearer ${token}`,
+      }),
+    },
+  });
+
+  instance.interceptors.response.use(
+    (response) => response,
+    (error: AxiosError) => {
+      if (error.response?.status === 401) {
+        throw new AuthError("Unauthorized", "/");
+      }
+      return Promise.reject(error);
+    }
+  );
+
+  return instance;
+}
+
+// Client-side API hook
+export function useApiClient(): AxiosInstance {
+  const { user } = useAppSelector((state) => state.auth);
+
+  const client = axios.create(baseConfig);
+
+  client.interceptors.request.use((config) => {
+    // Skip auth headers for public routes
+    const isPublicRoute = PUBLIC_ROUTES.some((route) =>
+      config.url?.startsWith(route)
+    );
+
+    if (!isPublicRoute && user?.token) {
+      config.headers.Authorization = `Bearer ${user.token}`;
+    }
+    return config;
+  });
+
+  client.interceptors.response.use(
+    (response) => response,
+    (error: AxiosError) => {
+      if (error.response?.status === 401) {
+        throw new AuthError(
+          "Unauthorized",
+          typeof window !== "undefined" ? window.location.pathname : "/"
+        );
+      }
+      return Promise.reject(error);
+    }
+  );
+
+  return client;
+}
+
+// Utility function for public API calls
+export function publicApiClient(): AxiosInstance {
+  return axios.create(baseConfig);
 }

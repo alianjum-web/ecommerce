@@ -89,6 +89,7 @@ export const logoutUser = createAsyncThunk<void, void, ThunkApiConfig>(
   }
 );
 
+
 export const checkAuth = createAsyncThunk<User, void, ThunkApiConfig>(
   "auth/checkAuth",
   async (_, { rejectWithValue }) => {

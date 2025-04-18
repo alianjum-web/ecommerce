@@ -1,59 +1,86 @@
 'use client'
 
-import { ReactNode } from 'react'
-import Navigation from '@/components/Navigation'
-import { useAppSelector } from '@/store/hooks'
+import { ReactNode, useEffect, useMemo } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
+import { useAppSelector } from '@/store/hooks'
+import Navigation from '@/components/Navigation'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
-import { useEffect } from 'react'
 
-const publicRoutes = [
+// Define public routes that don't require authentication
+const PUBLIC_ROUTES = [
   '/shopping/home',
   '/shopping/listing',
   '/shopping/search'
 ]
 
+// Define buyer-only routes
+const BUYER_ONLY_ROUTES = [
+  '/shopping/checkout',
+  '/shopping/payment'
+]
+
 export default function ShoppingLayout({ children }: { children: ReactNode }) {
-  const { user, isAuthenticated, isLoading } = useAppSelector((state) => state.auth)
   const router = useRouter()
   const pathname = usePathname()
-  
-  // Get clean path without basePath
-  const cleanPath = pathname?.replace('/app', '') || ''
+  const { user, isAuthenticated, isLoading } = useAppSelector((state) => state.auth)
 
-  // Check if current route is protected
-  const isProtectedRoute = !publicRoutes.some(route => cleanPath.startsWith(route))
+  // Normalize path by removing any /app prefix
+  const cleanPath = useMemo(() => 
+    pathname?.replace(/^\/app/, '') || '', 
+    [pathname]
+  )
+
+  // Check if current route is public
+  const isPublicRoute = useMemo(() => 
+    PUBLIC_ROUTES.some(route => cleanPath.startsWith(route)),
+    [cleanPath]
+  )
+
+  // Check if route requires buyer role
+  const requiresBuyerRole = useMemo(() =>
+    BUYER_ONLY_ROUTES.some(route => cleanPath.startsWith(route)),
+    [cleanPath]
+  )
 
   useEffect(() => {
+    // Skip auth checks for public routes
+    if (isPublicRoute) return
+
     if (isLoading) return
 
-    if (!isAuthenticated && isProtectedRoute) {
-      router.push(`/app/unauth-page?returnUrl=${encodeURIComponent(cleanPath)}`)
+    // Redirect logic for protected routes
+    if (!isAuthenticated) {
+      router.push(`/unauth-page?returnUrl=${encodeURIComponent(cleanPath)}`)
       return
     }
 
-    // If trying to access cart-related pages without being a buyer
-    if (isAuthenticated && user?.role !== 'buyer' && 
-        (cleanPath.startsWith('/shopping/checkout') || 
-         cleanPath.startsWith('/shopping/payment'))) {
-      router.push('/app/unauth-page')
+    // Redirect logic for buyer-only routes
+    if (requiresBuyerRole && user?.role !== 'buyer') {
+      router.push('/unauth-page')
     }
-  }, [isAuthenticated, isLoading, isProtectedRoute, cleanPath, router, user])
+  }, [isAuthenticated, isLoading, isPublicRoute, requiresBuyerRole, cleanPath, router, user])
 
-  if (isLoading) {
-    return <div className="flex items-center justify-center min-h-screen">
-      <LoadingSpinner />
-    </div>
+  // Show loading spinner while auth state is being checked (only for protected routes)
+  if (!isPublicRoute && isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <LoadingSpinner />
+      </div>
+    )
   }
 
-  if (!isAuthenticated && isProtectedRoute) {
-    return null // Redirect will happen in useEffect
+  // Don't render anything if redirecting (handled in useEffect)
+  if (!isPublicRoute && !isAuthenticated) {
+    return null
   }
 
+  // Main layout render
   return (
     <div className="shopping-layout">
       <Navigation />
-      <main>{children}</main>
+      <main className="container mx-auto px-4 py-8">
+        {children}
+      </main>
     </div>
   )
 }

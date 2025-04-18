@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { getFeatureImages } from "@/store/common-slice";
 import {
   Airplay,
   BabyIcon,
@@ -30,7 +31,6 @@ import {
   fetchProductDetails,
 } from "@/store/shop/product-slice";
 import { addToCart, fetchCartItems } from "@/store/shop/cart-slice";
-import { getFeatureImages } from "@/store/common-slice";
 import type { Product, ProductDetails } from "@/utils/productInterface";
 import { createLogger } from "@/utils/logger";
 import Image from "next/image";
@@ -75,12 +75,12 @@ export default function ShoppingHome() {
 
   // Redux state selectors
   const { productList, productDetails, isLoading, error } = useAppSelector(
-    (state: RootState ) => state.shopProducts
+    (state: RootState) => state.shopProducts
   );
 
   const { featureImageList } = useAppSelector((state) => state.commonFeature);
   // const { user } = useAppSelector((state) => state.auth);
-  
+
   // Component state
   const [currentSlide, setCurrentSlide] = useState(0);
   const [openDetailsDialog, setOpenDetailsDialog] = useState(false);
@@ -112,34 +112,41 @@ export default function ShoppingHome() {
     [dispatch]
   );
 
-// Add these improvements from first version:
-// ShoppingHome.tsx
-const handleAddToCart = useCallback(async (productId: string) => {
-  const state = store.getState();
-  const { user } = state.auth;
-  
-  if (!user?._id) {
-    toast.error("Please login to add items to cart");
-    router.push(`/app/auth/login?redirect=${encodeURIComponent(window.location.pathname)}`);
-    return;
-  }
+  // Add these improvements from first version:
+  // ShoppingHome.tsx
+  const handleAddToCart = useCallback(
+    async (productId: string) => {
+      const state = store.getState();
+      const { user } = state.auth;
 
-  try {
-    await dispatch(addToCart({
-      userId: user._id,
-      productId,
-      quantity: 1,
-    })).unwrap();
-    
-    // Only fetch cart items if user is authenticated
-    if (user._id) {
-      await dispatch(fetchCartItems()).unwrap();
-    }
-    
-    toast.success("Product added to cart");
-  } catch (error) {
-    toast.error("Failed to add item to cart");
-  }
+      if (!user?._id) {
+        toast.error("Please login to add items to cart");
+        router.push(
+          `/app/auth/login?redirect=${encodeURIComponent(
+            window.location.pathname
+          )}`
+        );
+        return;
+      }
+
+      try {
+        await dispatch(
+          addToCart({
+            userId: user._id,
+            productId,
+            quantity: 1,
+          })
+        ).unwrap();
+
+        // Only fetch cart items if user is authenticated
+        if (user._id) {
+          await dispatch(fetchCartItems()).unwrap();
+        }
+
+        toast.success("Product added to cart");
+      } catch (error) {
+        toast.error("Failed to add item to cart");
+      }
 }, [dispatch, router]);
 
 
@@ -177,9 +184,12 @@ const handleAddToCart = useCallback(async (productId: string) => {
         ]);
       } catch (error) {
         logger.error("Failed to fetch initial data:", error);
-        toast.error("Error", {
-          description: "Failed to load initial data",
-        });
+        // Don't show error if it's just unauthorized (user might not be logged in)
+        if (typeof error === "object" && error !== null && "status" in error && error.status !== 401) {
+          toast.error("Error", {
+            description: "Failed to load initial data",
+          });
+        }
       } finally {
         setIsInitialLoad(false);
       }
@@ -238,7 +248,14 @@ const handleAddToCart = useCallback(async (productId: string) => {
         ))}
       </div>
     );
-  }, [productList, isLoading, error, isInitialLoad, handleGetProductDetails, handleAddToCart]);
+  }, [
+    productList,
+    isLoading,
+    error,
+    isInitialLoad,
+    handleGetProductDetails,
+    handleAddToCart,
+  ]);
 
   if (isInitialLoad && isLoading) {
     return (
@@ -270,13 +287,13 @@ const handleAddToCart = useCallback(async (productId: string) => {
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
                   target.onerror = null;
-                  target.src = '/placeholder-product.png';
+                  target.src = "/placeholder-product.png";
                 }}
               />
             </div>
           </div>
         ))}
-        
+
         {featureImageList && featureImageList.length > 1 && (
           <>
             <Button

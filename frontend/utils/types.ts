@@ -7,6 +7,7 @@ export interface User {
   fullName: string;
   email: string;
   password: string;
+  token?: string;
   role: UserRole; // Only these three roles are allowed
   createdAt?: string; // Will be set by server
   updatedAt?: string; // Will be set by server

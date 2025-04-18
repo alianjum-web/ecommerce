@@ -1,5 +1,4 @@
 import axios, {
-  Axios,
   AxiosError,
   AxiosInstance,
   AxiosRequestConfig,
@@ -7,8 +6,6 @@ import axios, {
 import { cookies } from "next/headers";
 import { AuthError } from "../errors/auth-error";
 import { useAppSelector } from "@/store/hooks";
-import { config } from "process";
-import { error } from "console";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 

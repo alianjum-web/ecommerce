@@ -1,4 +1,4 @@
-// lib/auth/authUtils.ts
+// lib/hook/authUtils.ts
 import axios, { AxiosError } from 'axios';
 import { cookies } from 'next/headers'
 import type { User } from '@/utils/types'
