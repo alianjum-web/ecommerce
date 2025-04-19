@@ -14,6 +14,7 @@ interface AuthState {
   user: User | null;
   error: string | null;
   isInitialized: boolean;
+  skipAuthCheck: boolean;
 }
 
 const initialState: AuthState = {
@@ -22,6 +23,7 @@ const initialState: AuthState = {
   user: null,
   error: null,
   isInitialized: false,
+  skipAuthCheck: false
 };
 
 // Improved apiCall helper with better error handling
@@ -92,7 +94,13 @@ export const logoutUser = createAsyncThunk<void, void, ThunkApiConfig>(
 
 export const checkAuth = createAsyncThunk<User, void, ThunkApiConfig>(
   "auth/checkAuth",
-  async (_, { rejectWithValue }) => {
+  async (_, { getState, rejectWithValue }) => {
+    const state = getState() as RootState;
+    // Skip auth check if we're on a public route
+    if (state.auth.skipAuthCheck) {
+      return rejectWithValue('Skipped auth check for public route');
+    }
+    
     try {
       const response = await axios.get<{ user: User }>(`${BASE_URL}/api/auth/check-auth`, {
         withCredentials: true
@@ -120,6 +128,15 @@ const authSlice = createSlice({
       state.error = null;
       state.isInitialized = true;
     },
+    setSkipAuthCheck: (state, action: PayloadAction<boolean>) => {
+      state.skipAuthCheck = action.payload;
+    },
+    rehydrate: (state, action) => {
+      return {
+        ...state,
+        ...action.payload
+      };
+    }
   },
   extraReducers: (builder) => {
     builder

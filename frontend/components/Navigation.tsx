@@ -23,7 +23,7 @@ export default function Navigation() {
     try {
       await dispatch(logoutUser()).unwrap()
       toast.success('Logged out successfully')
-      window.location.href = '/app/auth/login' // Full reload to clear state
+      window.location.href = '/auth/login' // Full reload to clear state
     } catch {
       toast.error('Failed to log out')
     }
@@ -33,9 +33,9 @@ export default function Navigation() {
     <nav className="flex items-center justify-between p-4 bg-white shadow-sm">
       <div className="flex items-center space-x-6">
         <Link 
-          href="/app/shopping/home" 
+          href="/shopping/home" 
           className={`text-sm font-medium transition-colors hover:text-primary ${
-            isActive('/app/shopping/home') ? 'text-black' : 'text-muted-foreground'
+            isActive('/shopping/home') ? 'text-black' : 'text-muted-foreground'
           }`}
         >
           Home
@@ -43,9 +43,9 @@ export default function Navigation() {
         
         {isAuthenticated && (
           <Link
-            href="/app/shopping/account"
+            href="/shopping/account"
             className={`text-sm font-medium transition-colors hover:text-primary ${
-              isActive('/app/shopping/account') ? 'text-black' : 'text-muted-foreground'
+              isActive('/shopping/account') ? 'text-black' : 'text-muted-foreground'
             }`}
           >
             My Account
@@ -58,9 +58,9 @@ export default function Navigation() {
           <>
             {user && ['admin', 'seller'].includes(user.role) && (
               <Link
-                href="/app/admin/dashboard"
+                href="/admin/dashboard"
                 className={`text-sm font-medium transition-colors hover:text-primary ${
-                  isActive('/app/admin/dashboard') ? 'text-black' : 'text-muted-foreground'
+                  isActive('/admin/dashboard') ? 'text-black' : 'text-muted-foreground'
                 }`}
               >
                 Admin Dashboard
@@ -75,7 +75,7 @@ export default function Navigation() {
             </Button>
           </>
         ) : (
-          <Link href="/app/auth/login">
+          <Link href="/auth/login">
             <Button variant="default" size="sm">
               Login
             </Button>

@@ -22,6 +22,9 @@ import shopSearchSlice from "./shop/search-slice";
 import shopReviewSlice from "./shop/review-slice";
 import commonFeatureSlice from "./common-slice";
 import formReducer from "./slices/formSlices";
+import { version } from "os";
+import { callbackify } from "util";
+import { Satellite } from "lucide-react";
 
 // Create a no-op storage for server-side
 const createNoopStorage = () => {
@@ -58,6 +61,7 @@ const rootReducer = combineReducers({
 });
 
 
+// store.ts
 export const persistConfig = {
   key: "root",
   storage: {
@@ -76,7 +80,7 @@ export const persistConfig = {
         return storage.setItem(key, value)
       } catch (error) {
         console.error('Failed to persist state:', error)
-        return Promise.resolve(); // Ensure a value is returned in the catch block
+        return Promise.resolve(); // Ensure a value is always returned
       }
     }
   },
@@ -84,7 +88,7 @@ export const persistConfig = {
   version: 1,
   migrate: (state: any) => {
     if (!state) return Promise.resolve(undefined)
-    return Promise.resolve(state)
+    return Promise.resolve(state);  
   },
 }
 
@@ -92,26 +96,38 @@ const persistedReducer = persistReducer(persistConfig, rootReducer);
 
 export const store = configureStore({
   reducer: persistedReducer,
-  middleware: (getDefaultMiddleware) =>
+  middleware: (getDefaultMiddleware) => 
     getDefaultMiddleware({
       serializableCheck: {
-        ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
-        ignoredPaths: ['some.nested.path'], // Add if needed
+        ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE,
+          REGISTER
+        ],
+        ignoredPaths: ['some.nested.path'],  // Add if needed
       },
     }),
-  devTools: process.env.NODE_ENV !== "production",
+    devTools: process.env.NODE_ENV  !== "production",
 });
-// Add to your store configuration
+
+// Add to your store configuration 
 if (typeof window !== 'undefined') {
   window.addEventListener('storage', (event) => {
     if (event.key === `persist:${persistConfig.key}`) {
-      store.dispatch({ type: 'REHYDRATE_FROM_STORAGE' })
+      const persistedState = localStorage.getItem(`persist:${persistConfig.key}`);
+      if (persistedState) {
+        const parsedState = JSON.parse(persistedState);
+        // Dispatch new state or update Redux manually
+        store.dispatch({
+          type: 'auth/rehydrate',
+          payload: parsedState.auth
+        });
+      }
     }
-  })
+  });
 }
+
 
 export const persistor = persistStore(store);
 
-// Infer the RootState and AppDispatch types from the store itself
+// Infer the RootState and AppDispath types from the store itself
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;

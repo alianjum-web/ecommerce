@@ -3,20 +3,22 @@
 import { Provider } from 'react-redux'
 import { PersistGate } from 'redux-persist/integration/react'
 import { store, persistor } from '@/store/store'
-import { ReactNode, useEffect } from 'react'
+import { ReactNode } from 'react'
 import { Skeleton } from '@/components/ui/skeleton'
-import { checkAuth } from '@/store/auth-slice'
-import { useAppDispatch } from '@/store/hooks'
+// import { checkAuth } from '@/store/auth-slice'
+// import { useAppDispatch } from '@/store/hooks'
 
-const AuthInitializer = ({ children }: { children: ReactNode }) => {
-  const dispatch = useAppDispatch()
 
-  useEffect(() => {
-    dispatch(checkAuth())
-  }, [dispatch])
 
-  return <>{children}</>
-}
+// const AuthInitializer = ({ children }: { children: ReactNode }) => {
+//   const dispatch = useAppDispatch()
+
+//   useEffect(() => {
+//       dispatch(checkAuth())
+//   }, [dispatch])
+
+//   return <>{children}</>
+// }
 
 export function Providers({ children }: { children: ReactNode }) {
   return (
@@ -33,9 +35,9 @@ export function Providers({ children }: { children: ReactNode }) {
         }
         persistor={persistor}
       >
-        <AuthInitializer>
+        {/* <AuthInitializer> */}
           {children}
-        </AuthInitializer>
+        {/* </AuthInitializer> */}
       </PersistGate>
     </Provider>
   )

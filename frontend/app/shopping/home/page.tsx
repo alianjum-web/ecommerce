@@ -120,12 +120,19 @@ export default function ShoppingHome() {
       const { user } = state.auth;
 
       if (!user?._id) {
-        toast.error("Please login to add items to cart");
-        router.push(
-          `/app/auth/login?redirect=${encodeURIComponent(
-            window.location.pathname
-          )}`
-        );
+        // Show toast first
+        toast.error("Error", {
+          description: "Please login to add items to cart",
+          duration: 2000, // Ensure it stays visible for 2 seconds
+          onAutoClose: () => {
+            // Navigate after toast closes
+            router.push(
+              `/auth/login?redirect=${encodeURIComponent(
+                window.location.pathname
+              )}`
+            );
+          }
+        });
         return;
       }
 
